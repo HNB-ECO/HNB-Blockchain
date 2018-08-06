@@ -1,0 +1,13 @@
+{
+  "logConfig":{
+    "path":"./",
+    "level":"debug"
+  },
+  "maxConnOutBound": 10,
+  "maxConnInBound": 100,
+  "enableConsensus": true,
+  "singleIP": 10, 
+  "syncPort": 7100,
+  "consPort": 8100,
+  "isTLS": false
+}
