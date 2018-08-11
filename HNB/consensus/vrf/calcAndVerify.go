@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"crypto"
-	"Test/vrf/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/vrf/common"
 )
 
 func computeVrf(sk common.PrivateKey, blkNum uint32, preVrf []byte) ([]byte, []byte, error)  {
