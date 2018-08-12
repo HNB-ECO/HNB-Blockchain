@@ -3,6 +3,7 @@ package merkle
 import (
 	"testing"
 	"fmt"
+	"encoding/hex"
 )
 
 
@@ -16,7 +17,7 @@ func TestMerkleRoot(t *testing.T) {
 	if b == nil {
 		fmt.Println("lalal")
 	} else {
-		print(b.Depth)
+		printMerkle(b.Root, b.Depth)
 	}
 }
 func ComputeMerkleRoot(hashes []BYTE) *merkleTree {
@@ -25,4 +26,19 @@ func ComputeMerkleRoot(hashes []BYTE) *merkleTree {
 	}
 	tree, _ := newMerkleTree(hashes)
 	return tree
+}
+
+
+func printMerkle(mt *merkleTreeNode, level uint)  {
+	//if mt == nil {
+	//	fmt.Println("level", level)
+	//	return
+	//}
+	if mt.Right == nil || mt.Left == nil {
+		fmt.Println("level", level, hex.EncodeToString(mt.Hash))
+		return
+	}
+	fmt.Println("level", level, hex.EncodeToString(mt.Hash))
+	printMerkle(mt.Left, level-1)
+	printMerkle(mt.Right, level-1)
 }
