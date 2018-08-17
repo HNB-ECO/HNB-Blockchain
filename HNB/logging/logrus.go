@@ -89,3 +89,19 @@ func (li *logrusIns) Warning(key, msg string){
 func (li *logrusIns) Error(key, msg string){
 	li.WithFields(log.Fields{"type": key}).Error(msg)
 }
+
+func (li *logrusIns) Debugf(key, format string, args ...interface{}){
+	li.WithFields(log.Fields{"type": key}).Debugf(format, args...)
+}
+
+func (li *logrusIns) Infof(key, format string, args ...interface{}){
+	li.WithFields(log.Fields{"type": key}).Infof(format, args...)
+}
+
+func (li *logrusIns) Warningf(key, format string, args ...interface{}){
+	li.WithFields(log.Fields{"type": key}).Warningf(format, args...)
+}
+
+func (li *logrusIns) Errorf(key, format string, args ...interface{}){
+	li.WithFields(log.Fields{"type": key}).Errorf(format, args...)
+}

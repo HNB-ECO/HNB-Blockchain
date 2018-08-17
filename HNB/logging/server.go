@@ -9,6 +9,11 @@ type LogModule interface{
 	Debug(key, msg string)
 	Warning(key, msg string)
 	Error(key, msg string)
+
+	Infof(key, format string, args ...interface{})
+	Debugf(key, format string, args ...interface{})
+	Warningf(key, format string, args ...interface{})
+	Errorf(key, format string, args ...interface{})
 }
 
 //other module get log instance
