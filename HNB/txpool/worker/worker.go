@@ -99,10 +99,15 @@ func (tpw *TXPoolWorker) handlerTx() {
 	}
 }
 
-
+func (tpw *TXPoolWorker) GetTxsFromTXPool(count int) ([]*common.Transaction, error) {
+	return tpw.txPool.GetTxsFromTXPool(count)
+}
 
 func (tpw *TXPoolWorker) TxsLen() int {
 	return tpw.txPool.GetTxListLen()
 }
 
 
+func (tpw *TXPoolWorker) DelTxs (txs []*common.Transaction) {
+	tpw.txPool.DelTxs(txs)
+}

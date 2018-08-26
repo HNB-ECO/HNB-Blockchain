@@ -109,4 +109,23 @@ func (tps *TXPoolServer) InitTXPoolServer() {
 }
 
 
+func (tps *TXPoolServer) GetTxsFromTXPool(chainId string, count int) ([]*common.Transaction, error) {
+	worker, err := tps.GetServer(chainId)
+	if err != nil {
+		TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
+		return nil, errors.New(err.Error())
+	}
+	return worker.GetTxsFromTXPool(count)
+}
+
+func (tps *TXPoolServer) DelTxs(chainId string, txs []*common.Transaction) {
+	worker, err := tps.GetServer(chainId)
+	if err != nil {
+		TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
+		return
+	}
+	worker.DelTxs(txs)
+}
+
+
 
