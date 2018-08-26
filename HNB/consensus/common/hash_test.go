@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"fmt"
-	"uchains/api/util"
-
 	"golang.org/x/crypto/ripemd160"
 )
 
