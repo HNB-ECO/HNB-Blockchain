@@ -4,11 +4,11 @@ import "os"
 
 func PathExists(path string) (bool) {
 	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	}
-	if os.IsNotExist(err) {
+
+	if err != nil {
 		return false
 	}
-	return false
+
+	return true
+
 }
