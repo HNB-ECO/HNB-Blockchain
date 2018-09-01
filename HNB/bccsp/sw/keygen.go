@@ -9,7 +9,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
 type ecdsaKeyGenerator struct {
