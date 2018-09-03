@@ -4,6 +4,8 @@ import (
 	"testing"
 	"fmt"
 	"encoding/hex"
+	"crypto/sha256"
+	"strings"
 )
 
 
@@ -11,7 +13,10 @@ func TestMerkleRoot(t *testing.T) {
 	a := make([]BYTE, 0)
 	for i := 0; i < 10; i++ {
 		tmp := fmt.Sprintf("%d", i)
-		a = append(a, BYTE(tmp))
+		hash := sha256.New()
+		hash.Write([]byte(tmp))
+		temp1 := hash.Sum(nil)
+		a = append(a, BYTE(temp1))
 	}
 	b := ComputeMerkleRoot(a)
 	if b == nil {
@@ -38,7 +43,8 @@ func printMerkle(mt *merkleTreeNode, level uint)  {
 		fmt.Println("level", level, hex.EncodeToString(mt.Hash))
 		return
 	}
-	fmt.Println("level", level, hex.EncodeToString(mt.Hash))
+	lala := strings.Repeat(" ", int(level*2))
+	fmt.Println(lala, "level", level, hex.EncodeToString(mt.Hash))
 	printMerkle(mt.Left, level-1)
 	printMerkle(mt.Right, level-1)
 }
