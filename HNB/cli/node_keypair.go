@@ -4,13 +4,13 @@ import (
 	"github.com/urfave/cli"
 	"bufio"
 	"os"
-	"HNB/cli/utils"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli/utils"
 	"fmt"
 	"encoding/json"
-	"HNB/msp"
-	"HNB/cli/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli/common"
 	"io/ioutil"
-	bccspUtils "HNB/bccsp/utils"
+	bccspUtils "github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/utils"
 	//"HNB/bccsp/sw"
 )
 
