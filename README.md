@@ -11,5 +11,7 @@ HNB system is designed to enable the founding of sustainable economic model to s
 + High performance and great scalability to support off-chain liquidity network technologies
 + Strong security and powerful cryptographic capability
 
+![HNB Blockchain Architecture](https://github.com/HNB-ECO/HNB-Blockchain/blob/master/HNB%20Blockchina%20Core%20Technology%20Architecture.png)
+
 
 
