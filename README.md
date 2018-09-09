@@ -5,7 +5,7 @@ HNB system is designed to enable the founding of sustainable economic model to s
 
 + Innovative consensus mechanism to support multiple nodes to reach consensus speedily
 + Dual-chain and dual-token assets : HNB and HGS; HGS pegged to FIAT
-+ Algorithm bank to regulate the stability of HGS exchange rate to FIAT
++ Algorithm bank to regulate the stability of HGS
 + Robust and vital DApp collection and agile lightweight SDK to support easy integration with merchant applications
 + Support smart contract and multiple side chains
 + High performance and great scalability to support off-chain liquidity network technologies
