@@ -1,5 +1,6 @@
 <p align="center"><img src="https://github.com/HNB-ECO/official-website/blob/master/HNB.JPG"></p>
-##  HNB-Blockchain
+
+## HNB-Blockchain
 A Next-Generation Decentralized Economic Community
 
 HNB system is designed to enable the founding of sustainable economic model to serve real business entities. The goal is to use HNB system to build a next generation of blockchain-based decentralized economic entity serving an economic ecosystem comprised of over 100 million of consumers and merchants. The HNB economy of scale and its members are ever-increasing as the ecosystem grows. 
