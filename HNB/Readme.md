@@ -1,9 +1,9 @@
-## Repository Introduction
+## HNB Blockchain Code Repository Introduction
 |Directory|Brief Description|
 |:--------|:----------------|
 |access/rest|The interface to access this service friendly, includes RESTful, gRPC etc.|
 |account|The management of the node account with node address and node keys.|
-|appMgr|The framework of HNB, HGS transaction management. This module can also be the framework of scale-out to support smart contracts life circle management.It also provides the run-time environment of smart contracts.|
+|appMgr|The framework of HNB, HGS transaction management. This module can also be the framework of scale-out to support smart contracts life circle management. It also provides the run-time environment of smart contracts.|
 |bccsp|Blockchain crypto service provider with rsa, ecdsa, aes algorithms. Implementation of pkcs11 interface. And sw is the implementation of crypto without hard equipment.|
 |blockStore|Defines the struct of block and implements of wirte and read blocks.
 |cli|The command line interface for developers to easy to test or debug.
@@ -18,4 +18,4 @@
 |p2pNetwork|The peer to peer network management to help the node to manage the neighbor nodes to build the whole peer to peer network.
 |start|The entrance of this project. Starts and initializes whole system.
 |txpool|The transaction pool manager which manages transactions from the phase of transaction received to the phase of consensus.
-|util|Utilities of HNB project, such as: timer util+C44, date and time util, file util.
+|util|Utilities of HNB project, such as: timer util+C, date and time util, file util.
