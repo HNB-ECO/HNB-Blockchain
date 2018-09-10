@@ -1,12 +1,10 @@
 ## Repository Introduction
-|Directory      |Brief Description    |
-|:-------------:|:------------------- |
+|Directory|Brief Description|
+|:--------|:----------------|
 |access/rest|The interface to access this service friendly, includes RESTful, gRPC etc.|
 |account|The management of the node account with node address and node keys.|
-|appMgr|The framework of HNB, HGS transaction management. This module can also be the framework of scale-out to support 
-smart contracts life circle management.It also provides the run-time environment of smart contracts.|
-|bccsp|Blockchain crypto service provider with rsa, ecdsa, aes algorithms. Implementation of pkcs11 interface. 
-And sw is the implementation of crypto without hard equipment.|
+|appMgr|The framework of HNB, HGS transaction management. This module can also be the framework of scale-out to support smart contracts life circle management.It also provides the run-time environment of smart contracts.|
+|bccsp|Blockchain crypto service provider with rsa, ecdsa, aes algorithms. Implementation of pkcs11 interface. And sw is the implementation of crypto without hard equipment.|
 |blockStore|Defines the struct of block and implements of wirte and read blocks.
 |cli|The command line interface for developers to easy to test or debug.
 |common|The definition of common data struct of this project, such as: merkel tree and transaction.
