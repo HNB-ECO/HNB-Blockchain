@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	cmn "HNB/consensus/algorand/common"
+	"HNB/msp"
 )
 
 func (h *TDMMsgHandler) Sign(message *cmn.TDMMessage) (*cmn.TDMMessage, error) {
@@ -14,8 +15,7 @@ func (h *TDMMsgHandler) Sign(message *cmn.TDMMessage) (*cmn.TDMMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	//TODO sign
-	sign, err := h.coor.Sign(c)
+	sign, err := msp.Sign(c)
 	if err != nil {
 		return nil, err
 	}
@@ -44,13 +44,9 @@ func (h *TDMMsgHandler) Verify(message *cmn.TDMMessage, pubKeyID []byte) error {
 		return err
 	}
 
-	//TODO verify
-	pk, err := h.Network.GetPK(peerId.Name + "_" + peerId.OrgId)
-	if err != nil {
-		return err
-	}
-	//tdmLogger.Infof("verify pk %v msg %v sign %v", pk, c, sign)
-	ok, err := h.coor.Verify(pk, c, sign)
+	//msp.GetBccspKeyFromPubKey()
+
+	ok, err := msp.Verify(nil, sign, c)
 	if err != nil {
 		return err
 	}
