@@ -1,3 +1,4 @@
+<p align="center"><img src="https://github.com/HNB-ECO/official-website/blob/master/HNB.JPG"></p>
 #  HNB-Blockchain
 A Next-Generation Decentralized Economic Community
 
