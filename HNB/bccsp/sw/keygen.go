@@ -22,7 +22,7 @@ func (kg *ecdsaKeyGenerator) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err err
 		return nil, fmt.Errorf("Failed generating ECDSA key for [%v]: [%s]", kg.curve, err)
 	}
 
-	return &ecdsaPrivateKey{privKey}, nil
+	return &EcdsaPrivateKey{privKey}, nil
 }
 
 type aesKeyGenerator struct {

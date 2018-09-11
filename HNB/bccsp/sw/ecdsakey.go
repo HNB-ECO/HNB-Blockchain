@@ -15,36 +15,36 @@ import (
 	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
-type ecdsaPrivateKey struct {
-	privKey *ecdsa.PrivateKey
+type EcdsaPrivateKey struct {
+	PrivKey *ecdsa.PrivateKey
 }
 
-func (k *ecdsaPrivateKey) Bytes() (raw []byte, err error) {
+func (k *EcdsaPrivateKey) Bytes() (raw []byte, err error) {
 	return nil, errors.New("Not supported.")
 }
 
-func (k *ecdsaPrivateKey) SKI() (ski []byte) {
-	if k.privKey == nil {
+func (k *EcdsaPrivateKey) SKI() (ski []byte) {
+	if k.PrivKey == nil {
 		return nil
 	}
 
-	raw := elliptic.Marshal(k.privKey.Curve, k.privKey.PublicKey.X, k.privKey.PublicKey.Y)
+	raw := elliptic.Marshal(k.PrivKey.Curve, k.PrivKey.PublicKey.X, k.PrivKey.PublicKey.Y)
 
 	hash := sha256.New()
 	hash.Write(raw)
 	return hash.Sum(nil)
 }
 
-func (k *ecdsaPrivateKey) Symmetric() bool {
+func (k *EcdsaPrivateKey) Symmetric() bool {
 	return false
 }
 
-func (k *ecdsaPrivateKey) Private() bool {
+func (k *EcdsaPrivateKey) Private() bool {
 	return true
 }
 
-func (k *ecdsaPrivateKey) PublicKey() (bccsp.Key, error) {
-	return &ecdsaPublicKey{&k.privKey.PublicKey}, nil
+func (k *EcdsaPrivateKey) PublicKey() (bccsp.Key, error) {
+	return &ecdsaPublicKey{&k.PrivKey.PublicKey}, nil
 }
 
 type ecdsaPublicKey struct {
