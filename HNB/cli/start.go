@@ -28,6 +28,11 @@ var (
 		Value: "./peer.json",
 		Usage: "config path",
 	}
+	CliKeypairPath = cli.StringFlag{
+		Name: "keypairPath",
+		Value: "./node.key",
+		Usage: "keypair path",
+	}
 )
 
 
@@ -47,11 +52,13 @@ func Init(){
 		CliLogPath,
 		CliConfigPath,
 		CliLogLevel,
+		CliKeypairPath,
 	}
 
 	app.Commands = []cli.Command{
 		netC,
 		netMsg,
+		NodeKeypairCommand,
 	}
 
 	app.Run(os.Args)
@@ -73,8 +80,21 @@ func Start(ctx *cli.Context){
 	}
 
 
-	fmt.Printf("logPath=%s logLevel=%s\n",
-		config.Config.Log.Path, config.Config.Log.Level)
+	if ctx.IsSet(CliKeypairPath.Name) {
+		keyPairPath := ctx.GlobalString(CliKeypairPath.Name)
+		config.Config.KetPairPath = keyPairPath
+	}
+
+
+	fmt.Printf("logPath=%s logLevel=%s\n enableCons=%v\n keyPairPath=%v\n",
+		config.Config.Log.Path,
+		config.Config.Log.Level,
+		config.Config.EnableConsensus,
+		config.Config.KetPairPath)
+	err := msp.NewKeyPair().Init(config.Config.KetPairPath)
+	if err != nil {
+		panic("msp init err: "+err.Error())
+	}
 
 	logging.InitLogModule()
 
