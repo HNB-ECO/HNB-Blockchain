@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"HNB/ledger"
 	"HNB/txpool"
+	"HNB/msp"
 )
 
 var messageQueueSize = 19999
@@ -25,14 +26,14 @@ const VP = "1"
 
 
 type BftGroupSwitchAdvice struct {
-	DigestAddr  []byte   
+	DigestAddr  []byte   //本节点的地址
 	BftGroupNum uint64
 	Height      uint64
 	Hash        []byte
 }
 
 type BftGroupSwitchDemand struct {
-	DigestAddr         []byte 
+	DigestAddr         []byte   //本轮次提案人地址？
 	BftGroupNum        uint64
 	BftGroupCandidates []*BftGroupSwitchAdvice
 	NewBftGroup        []*BftGroupSwitchAdvice
@@ -42,28 +43,45 @@ type BftGroupSwitchDemand struct {
 type BftMgr struct {
 	cmn.BaseService
 
-
+	//广播到其他节点的消息
 	EventMsgQueue    chan *cmn.PeerMessage
 	PeerMsgQueue     chan *cmn.PeerMessage
 	InternalMsgQueue chan *cmn.PeerMessage
+	// VP 节点总列表
 	TotalValidators *types.ValidatorSet
+	// bft 共识节点数
 	BftNumber uint8
+	// 当前共识组编号
 	ID uint64
+	// 候选共识组编号
 	CandidateID uint64
+	// 当前共识组
 	CurBftGroup BftGroup
+	// 候选共识组map k:共识组编号 v:候选节点地址索引
 	BgCandidate      map[uint64][]*BftGroupSwitchAdvice
 	bgCandidateMutex sync.RWMutex
+	// 请求更换共识组消息map
 	BgAdvice      map[uint64][]*BftGroupSwitchAdvice
 	bgAdviceMutex sync.RWMutex
+	// 历史共识组列表
 	BgDemand      map[uint64]*BftGroupSwitchDemand
 	bgDemandMutex sync.RWMutex
+	// 在共识组节点切换的时候，是否重新加载过
 	bgChangeCache map[uint64]bool
+	// 接收块超时时间, 单位秒
 	BlkTimeout int64
+	// 接收块超时 超时器
 	BlkTimeoutTimer *time.Timer
+	// 超时计数器，只能未0或1
+	// 每次有新共识组时，变为0, 过了一次变成1
 	BlkTimeoutCount uint8
+	// 当前高度
 	CurHeight uint64
+	// 消息处理
 	MsgHandler *TDMMsgHandler
+	// 接收请求更换共识组列表超时时间, 单位秒
 	BgDemandTimeout int64
+	// 接收bgDemand消息管道
 	BgDemandReceiveChan chan uint64
 }
 
@@ -75,6 +93,7 @@ const(
 
 func NewBftMgr(lastCommitState state.State) (*BftMgr, error) {
 
+	//设定当前共识组
 	curBftGroup := BftGroup{
 		BgID:       lastCommitState.Validators.BgID,
 		Validators: lastCommitState.Validators.Validators,
@@ -95,6 +114,7 @@ func NewBftMgr(lastCommitState state.State) (*BftMgr, error) {
 		BftNumber:           uint8(config.Config.BftNum),
 	}
 
+	//当前高度为块号 + 1
 	bftMgr.CurHeight = lastCommitState.LastBlockNum + 1
 	bftMgr.ID = curBftGroup.BgID
 	bftMgr.CandidateID = curBftGroup.BgID + 1
@@ -116,6 +136,7 @@ func NewBftMgr(lastCommitState state.State) (*BftMgr, error) {
 			bftMgr.TotalValidators, curBftGroup.Validators,
 				bftMgr.CurHeight, bftMgr.ID, bftMgr.CandidateID)
 
+
 	p2pNetwork.RegisterConsNotify(bftMgr.RecvConsMsg)
 
 	bftMgr.BaseService = *cmn.NewBaseService("bftMgr", bftMgr)
@@ -124,12 +145,22 @@ func NewBftMgr(lastCommitState state.State) (*BftMgr, error) {
 	return bftMgr, nil
 }
 
+//获取参与共识的总节点数, 需要从配置文件读取
 func (bftMgr *BftMgr) LoadTotalValidators() (*types.ValidatorSet, error) {
-	panic("LoadTotalValidators")
-	//return types.NewValidatorSet(totalVals, bftMgr.ID), nil
-	return nil, nil
+	totalVals := make([]*types.Validator, 0)
+	for _,v := range config.Config.GeneValidators{
+		val := &types.Validator{
+			PubKey:  msp.GetBccspKeyFromPubKey(v.PubKeyStr),
+			Address: types.Address(v.PubKeyStr),
+			VotingPower: 1,
+		}
+		totalVals = append(totalVals, val)
+	}
+
+	return types.NewValidatorSet(totalVals, bftMgr.ID), nil
 }
 
+// 接收到network模块过来的共识消息
 func (bftMgr *BftMgr) RecvConsMsg(msg []byte) {
 	if msg == nil {
 		ConsLog.Errorf(LOGTABLE_CONS, "cons recv msg = nil")
@@ -151,6 +182,7 @@ func (bftMgr *BftMgr) RecvConsMsg(msg []byte) {
 
 }
 
+// 广播更换共识组的消息, 这里向所有VP节点广播
 func (bftMgr *BftMgr) BroadcastMsgToAllVP(msg *cmn.PeerMessage) {
 	ConsLog.Infof(LOGTABLE_CONS, "broad msg:%v", *msg)
 	select {
@@ -160,6 +192,7 @@ func (bftMgr *BftMgr) BroadcastMsgToAllVP(msg *cmn.PeerMessage) {
 	}
 }
 
+// 在启动时，本地节点设置接收块超时
 func (bftMgr *BftMgr) OnStart() error {
 	go bftMgr.BroadcastMsgRoutineListener()
 	go bftMgr.PeerMsgRoutineListener()
@@ -172,10 +205,12 @@ func (bftMgr *BftMgr) OnStart() error {
 	return nil
 }
 
+// 在停止时，停止共识消息处理
 func (bftMgr *BftMgr) OnStop() {
 	bftMgr.MsgHandler.OnStop()
 }
 
+// 检测是否共识组已经变更了，供落后的节点发现
 func (bftMgr *BftMgr) CheckBgChange() {
 	time.Sleep(time.Second * 3)
 	var blkNum uint64 = 0
@@ -229,6 +264,7 @@ func (bftMgr *BftMgr) CheckBgChange() {
 	}
 }
 
+// 广播消息监听协程，这里的消息需要向所有VP广播(目前时广播给所有节点 无论vp 还是 nvp)
 func (bftMgr *BftMgr) BroadcastMsgRoutineListener() {
 	ConsLog.Infof(LOGTABLE_CONS, "broadcast msg routine start")
 	for {
@@ -240,15 +276,18 @@ func (bftMgr *BftMgr) BroadcastMsgRoutineListener() {
 	}
 }
 
+// 监听接收消息处理协程, 接收更换共识组的消息，共识消息
 func (bftMgr *BftMgr) PeerMsgRoutineListener() {
 	ConsLog.Infof(LOGTABLE_CONS, "receive peer msg routine start")
 	for {
 		select {
+		//接收到其他节点消息
 		case peerMsg := <-bftMgr.PeerMsgQueue:
 			if peerMsg == nil {
 				ConsLog.Infof(LOGTABLE_CONS, "recv msg is nil")
 				continue
 			}
+			//所有消息
 			tdmMsg := &cmn.TDMMessage{}
 			if err := json.Unmarshal(peerMsg.Msg, tdmMsg); err != nil {
 				ConsLog.Errorf(LOGTABLE_CONS, "unmarshal tdmMsg err %v", err)
@@ -257,6 +296,7 @@ func (bftMgr *BftMgr) PeerMsgRoutineListener() {
 
 			ConsLog.Debugf(LOGTABLE_CONS, "recv peerMsg<-%s type %s", peerMsg.Sender, tdmMsg.Type)
 
+			//验证发送者身份
 			err := bftMgr.MsgHandler.Verify(tdmMsg, peerMsg.Sender)
 			if err != nil {
 				ConsLog.Errorf(LOGTABLE_CONS, "(bftMgr) Verify tdmMsg err %v", err)
@@ -264,6 +304,7 @@ func (bftMgr *BftMgr) PeerMsgRoutineListener() {
 			}
 
 			if cmn.TDMType_MsgBgAdvice == tdmMsg.Type {
+				// 接收请求更换共识组消息
 				err := bftMgr.HandleBgAdviceMsg(tdmMsg, peerMsg.Sender)
 				if err != nil {
 					ConsLog.Errorf(LOGTABLE_CONS, "handle bgAdvice err %v", err)
@@ -271,6 +312,7 @@ func (bftMgr *BftMgr) PeerMsgRoutineListener() {
 				}
 
 			} else if cmn.TDMType_MsgBgDemand == tdmMsg.Type {
+				// 接收请求更换共识组列表消息
 				bgDemand, err := bftMgr.HandleBgDemand(tdmMsg)
 				if err != nil {
 					ConsLog.Errorf(LOGTABLE_CONS, "invalid bgDemand err %v", err)
@@ -291,13 +333,16 @@ func (bftMgr *BftMgr) PeerMsgRoutineListener() {
 				continue
 			}
 
+			//接收到自己的更换共识组消息
 			if cmn.TDMType_MsgBgAdvice == tdmMsg.Type {
+				// 接收请求更换共识组消息
 				err := bftMgr.HandleBgAdviceMsg(tdmMsg, bgMsg.Sender)
 				if err != nil {
 					ConsLog.Errorf(LOGTABLE_CONS, "(bgAdvice) internal handle bgAdvice err %v", err)
 				}
 
 			} else if cmn.TDMType_MsgBgDemand == tdmMsg.Type {
+				// 接收请求更换共识组列表消息
 				bgDemand, err := bftMgr.HandleBgDemand(tdmMsg)
 				if err != nil {
 					ConsLog.Errorf(LOGTABLE_CONS, "(newBgEle) invalid bgDemand err %v", err)
@@ -310,6 +355,7 @@ func (bftMgr *BftMgr) PeerMsgRoutineListener() {
 	}
 }
 
+// 块超时监听协程
 func (bftMgr *BftMgr) BlkTimeoutRoutineScanner() {
 	ConsLog.Infof(LOGTABLE_CONS, "(bftMgr) blk timeout scanner routine start")
 
@@ -317,6 +363,8 @@ func (bftMgr *BftMgr) BlkTimeoutRoutineScanner() {
 	for {
 		select {
 		case <-bftMgr.BlkTimeoutTimer.C:
+			// 判断当前高度与之前缓存高度，若大于，重新设置超时
+			// 若等于，且该链有交易 广播发起请求更换共识组消息
 			h, err := ledger.GetBlockHeight()
 			if err != nil {
 				ConsLog.Errorf(LOGTABLE_CONS, "(blkTimeout) get blk height err %v", err)
@@ -333,6 +381,7 @@ func (bftMgr *BftMgr) BlkTimeoutRoutineScanner() {
 					bftMgr.BlkTimeoutTimer.Reset(time.Duration(bftMgr.BlkTimeout) * time.Second)
 					continue
 				}
+				// 防止交易刚进来，刚好卡上超时点，等待下一个超时点
 				if bftMgr.BlkTimeoutCount == 1 {
 					ConsLog.Infof(LOGTABLE_CONS, "(newBgEle) blkTimeout && has txs req changBg curBgNum %d candidateBgNum %d", bftMgr.ID, bftMgr.CandidateID)
 
@@ -353,6 +402,7 @@ func (bftMgr *BftMgr) BlkTimeoutRoutineScanner() {
 				bftMgr.BlkTimeoutTimer.Reset(time.Duration(bftMgr.BlkTimeout) * time.Second)
 
 			} else {
+				// 重置块超时
 				ConsLog.Debugf(LOGTABLE_CONS, "(blkTimeout) reset timer")
 
 				bftMgr.BlkTimeoutTimer.Reset(time.Duration(bftMgr.BlkTimeout) * time.Second)
@@ -362,6 +412,7 @@ func (bftMgr *BftMgr) BlkTimeoutRoutineScanner() {
 	}
 }
 
+// 请求更换共识组，包括发起bgAdvice和等待接收bgDemand
 func (bftMgr *BftMgr) ReqBgChange(height uint64) error {
 	bgAdviceMsg, err := bftMgr.BuildBgAdvice(height, bftMgr.CandidateID)
 	if err != nil {
@@ -369,9 +420,11 @@ func (bftMgr *BftMgr) ReqBgChange(height uint64) error {
 		return err
 	}
 
+	// 广播
 	bftMgr.BroadcastMsgToAllVP(bgAdviceMsg)
 	ConsLog.Infof(LOGTABLE_CONS, "(newBgEle) broadcast bgAdvice bgNum %d", bftMgr.CandidateID)
 
+	// 消息发给自己，统一处理
 	select {
 	case bftMgr.InternalMsgQueue <- bgAdviceMsg:
 		ConsLog.Infof(LOGTABLE_CONS, "(bgAdvice) myself bgNum %d", bftMgr.CandidateID)
@@ -379,6 +432,7 @@ func (bftMgr *BftMgr) ReqBgChange(height uint64) error {
 		ConsLog.Warningf(LOGTABLE_CONS, "tdm recvMsgChan full")
 	}
 
+	// 等待处理bgDemand
 	err = bftMgr.WaitBgDemand()
 	if err != nil {
 		ConsLog.Errorf(LOGTABLE_CONS, "(newBgEle) waitBgDemand err %v bgNum %d", err, bftMgr.CandidateID)
@@ -389,20 +443,28 @@ func (bftMgr *BftMgr) ReqBgChange(height uint64) error {
 	return nil
 }
 
+// 重新设置共识组
+// 1. 在新共识组的，重新启动 msgHandler
+// 2. 不在新共识组的，停止msgHandler
 func (bftMgr *BftMgr) ResetBftGroup(newBg BftGroup) error {
 
 	//if bftMgr.MsgHandler.IsRunning() { 不用判断 后续reset会重置
 	err := bftMgr.MsgHandler.Stop()
 	if err != nil {
+		// 只会发生"已经停止"的错误,不用返回err
 		ConsLog.Warningf(LOGTABLE_CONS,"(resetBg) msgHandler already stop err %v", err)
 	} else {
 		ConsLog.Infof(LOGTABLE_CONS,"(resetBg) msgHandler is running stop first, curBgNum %d newBgNum %d", bftMgr.ID, newBg.BgID)
 	}
 
+	// 等待所有协程停止完成
 	ConsLog.Infof(LOGTABLE_CONS,"(resetBg) wait msgHandler all routines stop")
 	bftMgr.MsgHandler.allRoutineExitWg.Wait()
 	ConsLog.Infof(LOGTABLE_CONS,"(resetBg) msgHandler all routines stop success")
 
+	// Reset 使得服务启动状态为0
+	// Reset 之前必须先停止服务，服务停止状态为1
+	// Reset 只重置了服务状态，并未启动服务, 重置 start =0 stop =0
 	ConsLog.Infof(LOGTABLE_CONS,"(resetBg) reset msgHandler state, curBgNum %d newBgNum %d", bftMgr.ID, newBg.BgID)
 	err = bftMgr.MsgHandler.Reset()
 	if err != nil {
@@ -411,6 +473,7 @@ func (bftMgr *BftMgr) ResetBftGroup(newBg BftGroup) error {
 	}
 
 	bftMgr.CurBftGroup = newBg
+	// 设置新的参与共识的验证节点
 	bftMgr.MsgHandler.Validators = types.NewValidatorSet(newBg.Validators, newBg.BgID)
 	bftMgr.MsgHandler.Votes = types.NewBlkNumVoteSet(bftMgr.MsgHandler.Height, bftMgr.MsgHandler.Validators)
 	bftMgr.MsgHandler.LastCommitState.Validators = bftMgr.MsgHandler.Validators
@@ -437,6 +500,7 @@ func (bftMgr *BftMgr) ResetBftGroup(newBg BftGroup) error {
 	//	ConsLog.Infof(LOGTABLE_CONS,"(resetBg) need not to participate consensus %v", bftMgr.MsgHandler.digestAddr)
 	//}
 
+	// 重置blkTimeouCount
 	bftMgr.BlkTimeoutCount = 0
 	bftMgr.BlkTimeoutTimer.Reset(time.Duration(bftMgr.BlkTimeout) * time.Second)
 	ConsLog.Infof(LOGTABLE_CONS,"(resetBg) reset blkTimeout")
@@ -453,10 +517,12 @@ func (bftMgr *BftMgr) ResetBftGroup(newBg BftGroup) error {
 	return nil
 }
 
+// 暂未需要
 func (bftMgr *BftMgr) OnReset() error {
 	return nil
 }
 
+// 从bgDemand中获取新的共识组
 func (bftMgr *BftMgr) MakeNewBgFromBgAdvice(bgNum uint64, bgAdviceSlice []*BftGroupSwitchAdvice) (*BftGroup, error) {
 	newValidatorSlice := make([]*types.Validator, bftMgr.BftNumber)
 	for index, advice := range bgAdviceSlice {
@@ -484,6 +550,7 @@ func (bftMgr *BftMgr) GetValidatorByAddr(addr cmn.HexBytes) *types.Validator {
 	return nil
 }
 
+// 等待接收请求更换共识组列表，直到超时
 func (bftMgr *BftMgr) WaitBgDemand() error {
 	ConsLog.Infof(LOGTABLE_CONS,"(newBgEle) wait bg demand")
 
@@ -501,6 +568,7 @@ func (bftMgr *BftMgr) WaitBgDemand() error {
 	}
 }
 
+// 判断是否已经发出请求更换共识组
 func (bftMgr *BftMgr) HasBgAdvice(addr cmn.HexBytes, bgNum uint64) bool {
 	bgAdviceSlice := bftMgr.GetBgAdviceSlice(bgNum)
 	if bgAdviceSlice == nil {
@@ -517,6 +585,7 @@ func (bftMgr *BftMgr) HasBgAdvice(addr cmn.HexBytes, bgNum uint64) bool {
 	return false
 }
 
+// 判断是否已经在候选者列表中
 func (bftMgr *BftMgr) HasBgCandidate(addr cmn.HexBytes, bgNum uint64) bool {
 	bgCandidateSlice := bftMgr.GetBgCandidate(bgNum)
 	if bgCandidateSlice == nil {
@@ -557,6 +626,7 @@ func (bftMgr *BftMgr) GetBgAdviceSlice(bgGroupNum uint64) []*BftGroupSwitchAdvic
 	return bftMgr.BgAdvice[bgGroupNum]
 }
 
+// 清除新共识组编号之前的缓存
 func (bftMgr *BftMgr) CleanBgAdvice(bgNum uint64) {
 	bftMgr.bgAdviceMutex.Lock()
 	defer bftMgr.bgAdviceMutex.Unlock()
