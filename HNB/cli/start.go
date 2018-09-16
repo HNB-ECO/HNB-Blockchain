@@ -10,6 +10,12 @@ import (
 	"HNB/p2pNetwork"
 	"time"
 	"HNB/access/rest"
+	"HNB/ledger"
+	tp "HNB/txpool"
+	"HNB/appMgr"
+	"HNB/consensus"
+	"HNB/db"
+	"HNB/msp"
 )
 
 var (
@@ -28,6 +34,11 @@ var (
 		Value: "./peer.json",
 		Usage: "config path",
 	}
+	CliConfigEnabledCons = cli.StringFlag{
+		Name: "enabledCons",
+		Value: "true",
+		Usage: "enabled",
+	}
 	CliKeypairPath = cli.StringFlag{
 		Name: "keypairPath",
 		Value: "./node.key",
@@ -43,7 +54,7 @@ func Init(){
 	app.ArgsUsage = "222"
 	app.Description = "333"
 	app.Version = "1.0.0"
-	app.Author = "HNB Developer"
+	app.Author = "HGS Developer"
 	app.HelpName = "444"
 	app.UsageText = "555"
 	app.Usage = "666"
@@ -52,13 +63,17 @@ func Init(){
 		CliLogPath,
 		CliConfigPath,
 		CliLogLevel,
+		CliConfigEnabledCons,
 		CliKeypairPath,
 	}
 
 	app.Commands = []cli.Command{
 		netC,
-		netMsg,
+		SendMsgC,
+		QueryMsgC,
 		NodeKeypairCommand,
+		ReadBlkC,
+		ReadBlkNumC,
 	}
 
 	app.Run(os.Args)
@@ -79,6 +94,12 @@ func Start(ctx *cli.Context){
 		config.Config.Log.Level = logLevel
 	}
 
+	if ctx.IsSet(CliConfigEnabledCons.Name){
+		enabledCons := ctx.GlobalBool(CliConfigEnabledCons.Name)
+		config.Config.EnableConsensus = enabledCons
+	}
+
+
 
 	if ctx.IsSet(CliKeypairPath.Name) {
 		keyPairPath := ctx.GlobalString(CliKeypairPath.Name)
@@ -88,16 +109,25 @@ func Start(ctx *cli.Context){
 
 	fmt.Printf("logPath=%s logLevel=%s\n enableCons=%v\n keyPairPath=%v\n",
 		config.Config.Log.Path,
-		config.Config.Log.Level,
-		config.Config.EnableConsensus,
-		config.Config.KetPairPath)
+			config.Config.Log.Level,
+				config.Config.EnableConsensus,
+					config.Config.KetPairPath)
+
+
+
+	logging.InitLogModule()
+
+
 	err := msp.NewKeyPair().Init(config.Config.KetPairPath)
 	if err != nil {
 		panic("msp init err: "+err.Error())
 	}
 
-	logging.InitLogModule()
-
+	db, err := db.InitDB("leveldb")
+	if err != nil{
+		panic(err.Error())
+	}
+	ledger.InitLedger(db)
 	//如果为了效率的提升，可以直接访问，无须消息总线
 	//msgBus.InitMsgBus()
 	//
@@ -106,10 +136,16 @@ func Start(ctx *cli.Context){
 	//b := 2
 	//msgBus.Publish("111",&a, &b)
 
-	err := p2pNetwork.NewServer().Start()
+	appMgr.InitAppMgr(db)
+
+	err = p2pNetwork.NewServer().Start()
 	if err != nil{
 		panic("network err: " + err.Error())
 	}
+
+	tp.NewTXPoolServer().InitTXPoolServer()
+
+	consensus.NewConsensusServer("algorand", tp.HGS).Start()
 
 	rest.StartRESTServer()
 	for{
