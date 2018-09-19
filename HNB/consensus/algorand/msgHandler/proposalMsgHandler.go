@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 )
 
+/**
+ * @FileName: proposalMsgHandler.go
+ */
 func (h *TDMMsgHandler) HandleInnerProposalMsg(tdmMsg *cmn.TDMMessage) error {
 
 	proposalMsg := &cmn.ProposalMessage{}
@@ -15,7 +18,7 @@ func (h *TDMMsgHandler) HandleInnerProposalMsg(tdmMsg *cmn.TDMMessage) error {
 		ConsLog.Errorf(LOGTABLE_CONS, "#(%v-%v) (HandleOuterProposalMsg) Error,err=%v", h.Height, h.Round, err)
 		return err
 	}
-	ConsLog.Infof(LOGTABLE_CONS, "#(%v-%v) (HandleInnerProposalMsg) proposalMsg=(%v/%v),detail=%v", h.Height, h.Round, proposalMsg.Height, proposalMsg.Round, proposalMsg.String())
+	ConsLog.Infof(LOGTABLE_CONS, "#(%v-%v) (HandleInnerProposalMsg) proposalMsg=(%v/%v),detail=%v", h.Height, h.Round, proposalMsg.Height, proposalMsg.Round, proposalMsg)
 	proposal := h.buildTypeProposalFromNetMsg(proposalMsg)
 	h.setProposal(proposal)
 
@@ -31,7 +34,7 @@ func (h *TDMMsgHandler) VerifyProposal(tdmMsg *cmn.TDMMessage, peerId uint64) (*
 	}
 	sign := proposalMsg.Signature
 	proposalMsg.Signature = nil
-	//TODO verify proposal xjm
+	//TODO verify proposal
 
 	//
 	//pk, err := h.Network.GetPK(peerId.Name)
@@ -61,11 +64,6 @@ func (h *TDMMsgHandler) HandleOuterProposalMsg(tdmMsg *cmn.TDMMessage, pubKeyID 
 		return err
 	}
 
-	//ConsLog.Infof(LOGTABLE_CONS, "#(%v-%v) (HandleOuterProposalMsg) From %v proposalMsg=(%v/%v),detail=%v", h.Height, h.Round, id, proposalMsg.Height, proposalMsg.Round, proposalMsg)
-	//proposalMsg, err := h.VerifyProposal(tdmMsg, peerId)
-	//if err != nil {
-	//	return err
-	//}
 	proposal := h.buildTypeProposalFromNetMsg(proposalMsg)
 	h.setProposal(proposal)
 	return nil
