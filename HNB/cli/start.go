@@ -74,6 +74,7 @@ func Init(){
 		NodeKeypairCommand,
 		ReadBlkC,
 		ReadBlkNumC,
+		ReadTxCount,
 	}
 
 	app.Run(os.Args)
