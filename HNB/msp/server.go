@@ -157,6 +157,35 @@ func GenKey(algLength int, CommPub interface{}) string {
 	return xPubKey + yPubKey
 }
 
+func PubKeyDecode(algType int, codeStr string) (pubKey bccsp.Key, err error) {
+
+        var paramS string
+        switch algType {
+
+        case ECDSAP256:
+                if paramS == "" {
+                        paramS = "{\"P\":115792089210356248762697446949407573530086143415290314195533631308867097853951,\"N\":115792089210356248762697446949407573529996955224135760342422259061068512044369,\"B\":41058363725152142129326129780047268409114441015993725554835256314039467401291,\"Gx\":48439561293906451759052585252797914202762949526041747995844080717082404635286,\"Gy\":36134250956749795798585127919587881956611106672985015071877198253568414405109,\"BitSize\":256,\"Name\":\"P-256\"}"
+                }
+                param := &elliptic.CurveParams{}
+                json.Unmarshal([]byte(paramS), param)
+                algLength := 256
+                fmt.Printf("bitsize:%d, key:%s\n", algLength, codeStr)
+
+                pk := &ecdsa.PublicKey{X: &big.Int{}, Y: &big.Int{}}
+
+                pk.Curve = param
+
+                /*algLength/8 transfer byte, X,byte to string double char*/
+                pk.X.SetString(codeStr[0:((algLength+7)/8)*2], 16)
+
+                /*algLength/8 transfer byte, Y,byte to string double char*/
+                pk.Y.SetString(codeStr[((algLength+7)/8)*2:((algLength+7)/8)*2*2], 16)
+
+                return &sw.EcdsaPublicKey{PubKey: pk}, nil
+
+        }
+        return nil, errors.New("algType not exist")
+}
 
 func Hash(msg []byte) (digest []byte, err error) {
 	bccspInstance := factory.GetDefault()
