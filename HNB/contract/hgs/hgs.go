@@ -26,7 +26,7 @@ type hgs struct {
 }
 
 
-
+var user = []string{"test1", "test2", "test3", "test4"}
 
 func GetContractHandler() (appComm.ContractInf, error){
 	HgsLog = logging.GetLogIns()
@@ -37,10 +37,15 @@ func GetContractHandler() (appComm.ContractInf, error){
 func InstallContract(ca appComm.ContractApi) error{
 	HgsLog = logging.GetLogIns()
 	HgsLog.Info(LOGTABLE_HGS, "Install Contract")
-	amountS := strconv.FormatInt(10000, 10)
-	amountS1 := strconv.FormatInt(20000, 10)
+	amountS := strconv.FormatInt(10000000, 10)
+	amountS1 := strconv.FormatInt(20000000, 10)
 	ca.PutState([]byte("zhangsan"), []byte(amountS))
 	ca.PutState([]byte("lisi"), []byte(amountS1))
+
+	for _, v := range user{
+		ca.PutState([]byte(v), []byte(amountS))
+	}
+
 	return nil
 }
 
@@ -66,7 +71,7 @@ func (h *hgs)Invoke(ca appComm.ContractApi) error{
 	inputAmount,_ := strconv.ParseInt(string(input), 10 ,64)
 
 	if inputAmount < hx.Amount{
-		return errors.New("amount less")
+		return errors.New("insufficient balance")
 	}
 
 	var bAmount int64 = 0
