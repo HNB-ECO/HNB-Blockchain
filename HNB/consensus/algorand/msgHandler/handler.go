@@ -62,3 +62,55 @@ func NewTDMMsgHandler(lastCommitState state.State) (*TDMMsgHandler, error) {
 	msgHandler.syncTimer = time.NewTimer(msgHandler.syncTimeout)
 	return msgHandler, nil
 }
+
+
+func (h *TDMMsgHandler) checkTxsAvailable() {
+	h.allRoutineExitWg.Add(1)
+	defer h.allRoutineExitWg.Done()
+
+	lastHeight := h.Height - 1
+	for {
+		select {
+		case <-txpool.NotifyTx(txpool.HGS):
+			if h.Height > lastHeight {
+				h.TxsAvailable <- h.Height
+
+				lastHeight = h.Height
+				ConsLog.Infof(LOGTABLE_CONS, "(check txs)txs available, propose h %d", h.Height)
+			}
+
+		case <-h.Quit():
+			ConsLog.Infof(LOGTABLE_CONS, "(check txs) consensus service stop, stop send proposal msg")
+			return
+		}
+	}
+}
+
+func (h *TDMMsgHandler) reconstructLastCommit(lastCommitState state.State, blk *bsComm.Block) error {
+	if lastCommitState.LastBlockNum == 0 {
+		return nil
+	}
+
+	seenCommit, err := h.LoadSeenCommit(lastCommitState.LastBlockNum, blk)
+	if err != nil {
+		return err
+	}
+
+	lastPrecommits := types.NewVoteSet(lastCommitState.LastBlockNum, seenCommit.Round(), types.VoteTypePrecommit, lastCommitState.Validators)
+	for _, precommit := range seenCommit.Precommits {
+		if precommit == nil {
+			continue
+		}
+		added, err := lastPrecommits.AddVote(precommit)
+		if !added || err != nil {
+			return fmt.Errorf("failed to reconstruct LastCommit: %v", err)
+		}
+	}
+
+	if lastCommitState.LastBlockNum != 1 && !lastPrecommits.HasTwoThirdsMajority() {
+		return errors.New("failed to reconstruct LastCommit: Does not have +2/3 maj")
+	}
+
+	h.LastCommit = lastPrecommits
+	return nil
+}
