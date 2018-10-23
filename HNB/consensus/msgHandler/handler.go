@@ -139,17 +139,22 @@ func (h *TDMMsgHandler) LoadSeenCommit(blkNum uint64, blk *bsComm.Block) (*types
 	return tdmBlk.CurrentCommit, nil
 }
 
+// send a msg into the receiveRoutine regarding our own proposal, block part, or vote
 func (h *TDMMsgHandler) sendInternalMessage(msg *cmn.PeerMessage) {
+//	ConsLog.Infof(LOGTABLE_CONS, "#(%v-%v) (sendInternalMessage) Type=%v,Timestamp=%v", h.Height, h.Round, msg.Msg.Type, msg.Msg.Timestamp)
+
 	msg.PeerID = p2pNetwork.GetLocatePeerID()
 
 	select {
 	case h.InternalMsgQueue <- msg:
 	default:
+//		ConsLog.Infof(LOGTABLE_CONS, "Internal msg queue is full. Using a go-routine")
 		go func() { h.InternalMsgQueue <- msg }()
 	}
 }
 
 func (h *TDMMsgHandler) BroadcastMsgToAll(msg *cmn.PeerMessage) {
+	//ConsLog.Infof(LOGTABLE_CONS, "#(%v-%v) (BroadcastMsgToAll) Type=%v,Timestamp=%v", h.Height, h.Round, msg.Msg.Type, msg.Msg.Timestamp)
 	select {
 	case h.EventMsgQueue <- msg:
 	default:
@@ -157,26 +162,4 @@ func (h *TDMMsgHandler) BroadcastMsgToAll(msg *cmn.PeerMessage) {
 		go func() { h.EventMsgQueue <- msg }()
 
 	}
-}
-
-func (h *TDMMsgHandler) OnStart() error {
-	err := h.timeoutTicker.Start()
-	if err != nil {
-		return err
-	}
-	go h.DeliverMsg()
-	go h.BroadcastMsg()
-	go h.checkTxsAvailable()
-	h.stopSyncTimer()
-	go h.Monitor() // add for monitor block height with other peers
-	go h.syncServer()
-	if h.inbgGroup() {
-		if h.Round == 0 && types.RoundStepNewHeight == h.Step {
-			h.scheduleRound0(h.GetRoundState(), true)
-		} else {
-			h.setTimeout()
-		}
-	}
-
-	return nil
 }
