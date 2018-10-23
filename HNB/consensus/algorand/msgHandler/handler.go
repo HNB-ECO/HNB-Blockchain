@@ -114,3 +114,69 @@ func (h *TDMMsgHandler) reconstructLastCommit(lastCommitState state.State, blk *
 	h.LastCommit = lastPrecommits
 	return nil
 }
+
+
+func (h *TDMMsgHandler) LoadSeenCommit(blkNum uint64, blk *bsComm.Block) (*types.Commit, error) {
+	var err error
+	if blk == nil {
+		blk, err = ledger.GetBlock(blkNum)
+		if err != nil {
+			return nil, err
+		}
+
+		if blk == nil {
+			return nil, fmt.Errorf("blk %d nil", blkNum)
+		}
+	}
+
+	tdmBlk, err := types.Standard2Cons(blk)
+	if err != nil {
+		return nil, err
+	}
+	ConsLog.Infof(LOGTABLE_CONS, "CurrentCommit=%v", tdmBlk.CurrentCommit.StringIndented("-"))
+	ConsLog.Infof(LOGTABLE_CONS, "LastCommit=%v", tdmBlk.LastCommit.StringIndented("-"))
+
+	return tdmBlk.CurrentCommit, nil
+}
+
+func (h *TDMMsgHandler) sendInternalMessage(msg *cmn.PeerMessage) {
+	msg.PeerID = p2pNetwork.GetLocatePeerID()
+
+	select {
+	case h.InternalMsgQueue <- msg:
+	default:
+		go func() { h.InternalMsgQueue <- msg }()
+	}
+}
+
+func (h *TDMMsgHandler) BroadcastMsgToAll(msg *cmn.PeerMessage) {
+	select {
+	case h.EventMsgQueue <- msg:
+	default:
+		ConsLog.Infof(LOGTABLE_CONS, "broadCast msg queue is full. Using a go-routine")
+		go func() { h.EventMsgQueue <- msg }()
+
+	}
+}
+
+func (h *TDMMsgHandler) OnStart() error {
+	err := h.timeoutTicker.Start()
+	if err != nil {
+		return err
+	}
+	go h.DeliverMsg()
+	go h.BroadcastMsg()
+	go h.checkTxsAvailable()
+	h.stopSyncTimer()
+	go h.Monitor() // add for monitor block height with other peers
+	go h.syncServer()
+	if h.inbgGroup() {
+		if h.Round == 0 && types.RoundStepNewHeight == h.Step {
+			h.scheduleRound0(h.GetRoundState(), true)
+		} else {
+			h.setTimeout()
+		}
+	}
+
+	return nil
+}
