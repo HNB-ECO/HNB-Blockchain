@@ -69,7 +69,7 @@ func (sh *SyncHandler) processRequestBlocks(req *syncComm.RequestBlocks, peerID 
 	if err != nil {
 		return
 	}
-	msg := reqMsg.NewTxMsg(payload)
+	msg := reqMsg.NewSyncMsg(payload)
 	//msg := &pbNetwork.Message{
 	//	Type:    pbNetwork.Message_SYNC_BLOCKS,
 	//	Payload: payload,
@@ -86,11 +86,12 @@ func (sh *SyncHandler) processRequestBlocks(req *syncComm.RequestBlocks, peerID 
 	p2pNetwork.Send(peerID, msg, false)
 }
 
-func (sh *SyncHandler) HandlerMessage(msg []byte) {
+func (sh *SyncHandler) HandlerMessage(msg []byte, msgSender uint64) {
 
 	syncMsg := &syncComm.SyncMessage{}
 	err := json.Unmarshal(msg, syncMsg)
 	if err != nil {
+		syncLogger.Infof(LOGTABLE_SYNC, "unmar %s", string(msg))
 		syncLogger.Errorf(LOGTABLE_SYNC, "(sync req).(req unmar).(%s)", err.Error())
 		return
 	}

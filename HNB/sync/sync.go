@@ -52,12 +52,10 @@ func (sh *SyncHandler) GetSyncInfo(chainID string) (*syncComm.SyncInfo, error) {
 	return sch.syncInfo, nil
 }
 
-func NewSync() (*SyncHandler, error) {
-
+func NewSync() *SyncHandler {
 	sh = &SyncHandler{}
 	syncLogger = logging.GetLogIns()
-
-	return sh, nil
+	return sh
 }
 
 func (sh *SyncHandler) Start() {
@@ -81,7 +79,7 @@ func (sh *SyncHandler) Start() {
 
 	p2pNetwork.RegisterSyncNotify(sh.HandlerMessage)
 
-	//sh.syncReq = make(chan *blockSyncReq, 20)
+	sh.syncReq = make(chan *blockSyncReq, 20)
 	//
 	//chains, err := lg.GetChainsInfo()
 	//if err != nil {
@@ -94,9 +92,9 @@ func (sh *SyncHandler) Start() {
 	//}
 	sh.addSyncHandler(txpool.HGS)
 
-	for j := 0; j < 3; j++ {
-		go sh.blockSyncThread()
-	}
+	//for j := 0; j < 3; j++ {
+	go sh.blockSyncThread()
+	//}
 
 	time.Sleep(400 * time.Millisecond)
 }
