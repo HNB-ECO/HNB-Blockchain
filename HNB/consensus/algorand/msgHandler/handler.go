@@ -180,3 +180,62 @@ func (h *TDMMsgHandler) OnStart() error {
 
 	return nil
 }
+
+
+
+func (h *TDMMsgHandler) setTimeout() {
+	switch h.Step {
+	case types.RoundStepPropose:
+		timeoutPropose := config.Config.ConsensusConfig.TimeoutPropose
+		h.scheduleTimeout(h.AddTimeOut(timeoutPropose), h.Height, h.Round, types.RoundStepPropose)
+	case types.RoundStepPrevote:
+		timeoutPrevote := config.Config.ConsensusConfig.TimeoutPrevote
+		h.scheduleTimeout(h.AddTimeOut(timeoutPrevote), h.Height, h.Round, types.RoundStepPrevote)
+	case types.RoundStepPrevoteWait:
+		timeoutPrevoteWait := config.Config.ConsensusConfig.TimeoutPrevoteWait
+		h.scheduleTimeout(h.AddTimeOut(timeoutPrevoteWait), h.Height, h.Round, types.RoundStepPrevoteWait)
+	case types.RoundStepPrecommit:
+		timeoutPrecommit := config.Config.ConsensusConfig.TimeoutPrecommit
+		h.scheduleTimeout(h.AddTimeOut(timeoutPrecommit), h.Height, h.Round, types.RoundStepPrecommit)
+	case types.RoundStepPrecommitWait:
+		timeoutPrecommitWait := config.Config.ConsensusConfig.TimeoutPrecommitWait
+		h.scheduleTimeout(h.AddTimeOut(timeoutPrecommitWait), h.Height, h.Round, types.RoundStepPrecommitWait)
+	case types.RoundStepNewHeight:
+		timeoutNewRound := config.Config.ConsensusConfig.TimeoutNewRound
+		h.scheduleTimeout(h.AddTimeOut(timeoutNewRound), h.Height, 0, types.RoundStepNewHeight)
+	case types.RoundStepNewRound:
+		h.dealNewRound()
+	}
+}
+
+func (h *TDMMsgHandler) dealNewRound() {
+	waitForTxs := h.WaitForTxs()
+	timeoutWaitFortx := config.Config.ConsensusConfig.TimeoutWaitFortx
+	if waitForTxs {
+		h.timeState.EndConsumeTime(h)
+		if txpool.TxsLen(txpool.HGS) > 0 {
+			h.enterPropose(h.Height, h.Round)
+		} else {
+			h.scheduleTimeout(h.AddTimeOut(timeoutWaitFortx), h.Height, h.Round, types.RoundStepNewRound)
+		}
+	} else if config.Config.ConsensusConfig.CreateEmptyBlocksInterval > 0 {
+		h.timeState.EndConsumeTime(h)
+		td := time.Duration(config.Config.ConsensusConfig.CreateEmptyBlocksInterval) * time.Millisecond
+		h.scheduleTimeout(td, h.Height, h.Round, types.RoundStepNewRound)
+	} else {
+		h.timeState.EndConsumeTime(h)
+		h.enterPropose(h.Height, h.Round)
+	}
+}
+
+func (h *TDMMsgHandler) inbgGroup() bool {
+	for _, val := range h.Validators.Validators {
+		//ConsLog.Infof(LOGTABLE_CONS, "inbgGroup %s %s", val.Address, h.digestAddr)
+		if bytes.Equal(val.Address, h.digestAddr) {
+			return true
+		}
+	}
+
+	return false
+}
+
