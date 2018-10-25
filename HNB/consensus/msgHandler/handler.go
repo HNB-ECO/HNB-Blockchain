@@ -163,3 +163,87 @@ func (h *TDMMsgHandler) BroadcastMsgToAll(msg *cmn.PeerMessage) {
 
 	}
 }
+
+
+func (h *TDMMsgHandler) OnStart() error {
+	err := h.timeoutTicker.Start()
+	if err != nil {
+		fmt.Print("进入TDMMsgHandler OnStart（）的ERROR")
+		return err
+	}
+
+	go h.DeliverMsg()
+	go h.BroadcastMsg()
+
+	go h.checkTxsAvailable()
+
+	h.stopSyncTimer()
+	go h.Monitor() // add for monitor block height with other peers
+	go h.syncServer()
+	go h.recvForkSearch() // add for recv forksearch msgs
+
+
+	if h.inbgGroup() {
+		if h.Round == 0 && types.RoundStepNewHeight == h.Step {
+			h.scheduleRound0(h.GetRoundState(), true)
+		} else {
+			h.setTimeout()
+		}
+	}
+
+	return nil
+}
+
+func (h *TDMMsgHandler) setTimeout() {
+	switch h.Step {
+	case types.RoundStepPropose:
+		timeoutPropose := h.chainConfig.ChainTDMConfig.TenderConsensus.TimeoutPropose
+		h.scheduleTimeout(h.AddTimeOut(timeoutPropose), h.Height, h.Round, types.RoundStepPropose)
+	case types.RoundStepPrevote:
+		timeoutPrevote := h.chainConfig.ChainTDMConfig.TenderConsensus.TimeoutPrevote
+		h.scheduleTimeout(h.AddTimeOut(timeoutPrevote), h.Height, h.Round, types.RoundStepPrevote)
+	case types.RoundStepPrevoteWait:
+		timeoutPrevoteWait := h.chainConfig.ChainTDMConfig.TenderConsensus.TimeoutPrevoteWait
+		h.scheduleTimeout(h.AddTimeOut(timeoutPrevoteWait), h.Height, h.Round, types.RoundStepPrevoteWait)
+	case types.RoundStepPrecommit:
+		timeoutPrecommit := h.chainConfig.ChainTDMConfig.TenderConsensus.TimeoutPrecommit
+		h.scheduleTimeout(h.AddTimeOut(timeoutPrecommit), h.Height, h.Round, types.RoundStepPrecommit)
+	case types.RoundStepPrecommitWait:
+		timeoutPrecommitWait := h.chainConfig.ChainTDMConfig.TenderConsensus.TimeoutPrecommitWait
+		h.scheduleTimeout(h.AddTimeOut(timeoutPrecommitWait), h.Height, h.Round, types.RoundStepPrecommitWait)
+	case types.RoundStepNewHeight:
+		timeoutNewRound := h.chainConfig.ChainTDMConfig.TenderConsensus.TimeoutNewRound
+		h.scheduleTimeout(h.AddTimeOut(timeoutNewRound), h.Height, 0, types.RoundStepNewHeight)
+	case types.RoundStepNewRound:
+		h.dealNewRound()
+	}
+}
+
+func (h *TDMMsgHandler) dealNewRound() {
+	waitForTxs := h.WaitForTxs()
+	timeoutWaitFortx := h.chainConfig.ChainTDMConfig.TenderConsensus.TimeoutWaitFortx
+	if waitForTxs {
+		h.timeState.EndConsumeTime(h)
+		if h.coor.GetOriginalBatchsLen(h.ChainID) > 0 {
+			h.enterPropose(h.Height, h.Round)
+		} else {
+			h.scheduleTimeout(h.AddTimeOut(timeoutWaitFortx), h.Height, h.Round, types.RoundStepNewRound)
+		}
+	} else if h.chainConfig.ChainTDMConfig.TenderConsensus.CreateEmptyBlocksInterval > 0 {
+		h.timeState.EndConsumeTime(h)
+		h.scheduleTimeout(h.config.EmptyBlocksInterval(), h.Height, h.Round, types.RoundStepNewRound)
+	} else {
+		h.timeState.EndConsumeTime(h)
+		h.enterPropose(h.Height, h.Round)
+	}
+}
+
+func (h *TDMMsgHandler) inbgGroup() bool {
+	for _, val := range h.Validators.Validators {
+		if bytes.Equal(val.Address, h.digestAddr) {
+			return true
+		}
+	}
+
+	return false
+}
