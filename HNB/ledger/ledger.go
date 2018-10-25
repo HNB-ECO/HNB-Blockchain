@@ -8,6 +8,7 @@ import (
 	ssComm "HNB/ledger/stateStore/common"
 	"HNB/logging"
 	"errors"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
 )
 
 // 系统数据在本文件中涉及存储，合约数据都在stateStore里面存储
