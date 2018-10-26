@@ -238,4 +238,38 @@ func (h *TDMMsgHandler) inbgGroup() bool {
 
 	return false
 }
+func (h *TDMMsgHandler) isPeerInbgGroup(pubKeyID []byte) bool {
+334         for _, val := range h.Validators.Validators {
+335                 if bytes.Equal(val.Address, h.digestAddr) {
+336                         return true
+337                 }
+338 
+339         }
+340 
+341         return false
+342 }
+343 
+348 func (h *TDMMsgHandler) OnStop() { 
+350         h.timeoutTicker.Stop()
+351 }
 
+354 func (h *TDMMsgHandler) OnReset() error {
+356         h.PeerMsgQueue = make(chan *cmn.PeerMessage, msgQueueSize)
+357         h.InternalMsgQueue = make(chan *cmn.PeerMessage, msgQueueSize)
+358         h.EventMsgQueue = make(chan *cmn.PeerMessage, msgQueueSize)
+359         h.TxsAvailable = make(chan uint64, 1)
+360         h.done = make(chan struct{})
+361         
+362         h.recvSyncChan = make(chan *psync.SyncNotify, msgQueueSize)
+363 
+365         h.isSyncStatus.SetFalse()
+366         h.stopSyncTimer()
+369         h.updateRoundStep(h.Round, types.RoundStepNewRound)
+371         h.timeoutTicker.Reset()
+372 
+373         return nil
+374 }
+375 
+376 func (h *TDMMsgHandler) String() string {
+377         return cmn.Fmt("tdmMsgHandler{tdm cons service}")
+378 }  
