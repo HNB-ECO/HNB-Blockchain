@@ -272,4 +272,46 @@ func (h *TDMMsgHandler) isPeerInbgGroup(pubKeyID []byte) bool {
 375 
 376 func (h *TDMMsgHandler) String() string {
 377         return cmn.Fmt("tdmMsgHandler{tdm cons service}")
-378 }  
+378 }
+
+
+func (h *TDMMsgHandler) String() string {
+	return cmn.Fmt("tdmMsgHandler{tdm cons service}")
+}
+
+func (h *TDMMsgHandler) scheduleRound0(rs *types.RoundState, justStarted bool) {
+	timeoutNewRound := config.Config.TimeoutNewRound
+	if justStarted{
+		h.scheduleTimeout(h.AddTimeOut(timeoutNewRound), rs.Height, 0, types.RoundStepNewHeight)
+	}else{
+		h.enterNewRound(rs.Height, 0)
+	}
+}
+
+func (h *TDMMsgHandler) saveBlock(block *types.Block, s *state.State) (*state.State, error) {
+	blk, _ := types.ConsToStandard(block)
+	blk.Header.PreviousHash = h.LastCommitState.PreviousHash
+	err := appMgr.BlockProcess(blk)
+	if err != nil {
+		return nil, err
+	}
+	s.PreviousHash, err = ledger.CalcBlockHash(blk)
+	if err != nil {
+		return nil, err
+	}
+
+	ConsLog.Infof(LOGTABLE_CONS, "WriteBlockSuccess TxLength=%v, BlockNum=%v", len(blk.Txs), block.BlockNum)
+	h.timeState.SetTxNum(len(blk.Txs))
+	h.timeState.SetHeight(block.BlockNum)
+	h.timeState.SetRound(h.Round)
+
+	txpool.DelTxs(txpool.HGS, blk.Txs)
+	ConsLog.Infof(LOGTABLE_CONS, "save blk successful")
+
+	return s, nil
+}
+
+func (h *TDMMsgHandler) getHeightFromLedger() uint64 {
+	height, _ := ledger.GetBlockHeight()
+	return height
+}  
