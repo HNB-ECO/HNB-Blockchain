@@ -314,4 +314,111 @@ func (h *TDMMsgHandler) saveBlock(block *types.Block, s *state.State) (*state.St
 func (h *TDMMsgHandler) getHeightFromLedger() uint64 {
 	height, _ := ledger.GetBlockHeight()
 	return height
+}
+
+
+
+
+// 从内存和块里获取vals
+func (h *TDMMsgHandler) LoadLastCommitStateFromBlkAndMem(newBlk *bsComm.Block) (*state.State, error) {
+	if newBlk.Header.BlockNum == 0 {
+		return nil, errors.New("can not be num 0")
+	}
+
+	tdmBlk, err := types.Standard2Cons(newBlk)
+	if err != nil {
+		return nil, err
+	}
+
+	curValidators, err := h.LoadValidators(newBlk)
+	if err != nil {
+		return nil, err
+	}
+
+	lastBlkID := tdmBlk.CurrentCommit.BlockID
+
+	return &state.State{
+		LastBlockNum:                tdmBlk.BlockNum,
+		LastBlockTime:               tdmBlk.Time,
+		LastBlockID:                 lastBlkID,
+		LastBlockTotalTx:            tdmBlk.Header.TotalTxs,
+		Validators:                  curValidators,
+		LastValidators:              h.LastCommitState.Validators,
+		LastHeightValidatorsChanged: tdmBlk.LastHeightChanged,
+		PrevVRFValue:                tdmBlk.BlkVRFValue,
+		PrevVRFProof:                tdmBlk.BlkVRFProof,
+
+	}, nil
+
+}
+
+// 都从块里获取vals
+func (h *TDMMsgHandler) LoadLastCommitStateFromBlk(block *bsComm.Block) (*state.State, error) {
+	tdmBlk, err := types.Standard2Cons(block)
+	if err != nil {
+		return nil, err
+	}
+
+	curValidators, err := h.LoadValidators(block)
+	if err != nil {
+		return nil, err
+	}
+
+	var lastValidators *types.ValidatorSet
+	if block.Header.BlockNum == 0 {
+		lastValidators = types.NewValidatorSet(nil, 0, nil, nil)
+	} else {
+		prevBlk, err := ledger.GetBlock(block.Header.BlockNum - 1)
+		if prevBlk == nil {
+			return nil, fmt.Errorf("tdm get last blk %d nil %v", block.Header.BlockNum - 1, err)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		lastValidators, err = h.LoadValidators(prevBlk)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var lastBlkID types.BlockID
+	if tdmBlk.BlockNum != 0 {
+		lastBlkID = tdmBlk.CurrentCommit.BlockID
+	}
+
+	return &state.State{
+		LastBlockNum:                tdmBlk.BlockNum,
+		LastBlockTime:               tdmBlk.Time,
+		LastBlockID:                 lastBlkID,
+		LastBlockTotalTx:            tdmBlk.Header.TotalTxs,
+		Validators:                  curValidators,
+		LastValidators:              lastValidators,
+		LastHeightValidatorsChanged: tdmBlk.LastHeightChanged,
+		PrevVRFValue:                tdmBlk.BlkVRFValue,
+		PrevVRFProof:                tdmBlk.BlkVRFProof,
+	}, nil
+}
+
+
+func (h *TDMMsgHandler) AddTimeOut(timeout int) time.Duration {
+	var timer int32 = 3
+	if h.Round > timer {
+		return time.Duration(timeout)*time.Millisecond + time.Duration(timer*1000)*time.Millisecond
+	} else {
+		return time.Duration(timeout)*time.Millisecond + time.Duration(h.Round*1000)*time.Millisecond
+	}
+}
+
+func (h *TDMMsgHandler) WaitForTxs() bool {
+	return !config.Config.ConsensusConfig.CreateEmptyBlocks
+}
+
+func (h *TDMMsgHandler) WaitForTxsNil() bool {
+	return !config.Config.CreateEmptyBlocks && config.Config.CreateEmptyBlocksInterval > 0
+}
+
+func (h *TDMMsgHandler) Commit(t time.Time) time.Time {
+	return t.Add(time.Duration(config.Config.TimeoutCommit) * time.Millisecond)
 }  
