@@ -2,31 +2,37 @@ package msp
 
 import (
 	"HNB/bccsp"
-	"io/ioutil"
-	"encoding/json"
-	//"HNB/bccsp/factory"
-	"HNB/bccsp/utils"
-	//"HNB/bccsp/sw"
+	"HNB/bccsp/secp256k1"
+	"HNB/bccsp/sw"
 	"HNB/logging"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 )
 
 type KeyPair struct {
-	Scheme		int
-	PubKey		bccsp.Key
-	PriKey		bccsp.Key
+	Scheme int
+	PubKey bccsp.Key
+	PriKey bccsp.Key
 }
 type SaveKeyPair struct {
-	Scheme		int
-	PubKey		[]byte
-	PriKey		[]byte
+	Scheme int
+	PubKey []byte
+	PriKey []byte
 }
+
 var MSPLog logging.LogModule
 var keyPair *KeyPair
-const(
-	LOGTABLE_MSP string = "msp"
 
+const (
+	LOGTABLE_MSP string = "msp"
 )
 
+func GetLocalPrivKey() bccsp.Key {
+	return keyPair.PriKey
+}
 func NewKeyPair() *KeyPair {
 	MSPLog = logging.GetLogIns()
 	ky := &KeyPair{}
@@ -39,35 +45,21 @@ func (kp *KeyPair) Init(path string) error {
 		return err
 	}
 
-	sPriKey, err := utils.PEMtoPrivateKey(sKeyPair.PriKey, nil)
-	if err != nil {
-		return err
+	algType := sKeyPair.Scheme
+	switch algType {
+	case ECDSAP256:
+		key := new(ecdsa.PrivateKey)
+		key.Curve = secp256k1.S256()
+		key.D.SetBytes(sKeyPair.PriKey)
+		key.PublicKey.X, key.PublicKey.Y = elliptic.Unmarshal(secp256k1.S256(), sKeyPair.PubKey)
+		kp.Scheme = sKeyPair.Scheme
+		kp.PubKey = &sw.Ecdsa256K1PublicKey{&key.PublicKey}
+		kp.PriKey = &sw.Ecdsa256K1PrivateKey{key}
+		return nil
+	default:
+		fmt.Printf("algType not support : %v\n", algType)
+		return fmt.Errorf("algType not support")
 	}
-	sk, err := BuildPriKey(sKeyPair.Scheme, sPriKey)
-	if err != nil {
-		return err
-	}
-	//sk, err := ImportPriKey(sKeyPair.Scheme, sPriKey)
-	//if err != nil {
-	//	return err
-	//}
-
-	//ski, err := ioutil.ReadFile("ID")
-	//if err != nil {
-	//	return err
-	//}
-	//keyStore, err := sw.NewFileBasedKeyStore(nil, path, false)
-	//if err != nil {
-	//	return err
-	//}
-	//sk, err := keyStore.GetKey(ski)
-	pubKey, err := sk.PublicKey()
-	if err != nil {
-		return err
-	}
-	kp.Scheme = sKeyPair.Scheme
-	kp.PubKey = pubKey
-	kp.PriKey = sk
 	return nil
 }
 
