@@ -1,34 +1,35 @@
 package ledger
 
-import(
-	bsComm "HNB/ledger/blockStore/common"
-	ssComm "HNB/ledger/stateStore/common"
+import (
 	dbComm "HNB/db/common"
 	"HNB/ledger/blockStore"
+	bsComm "HNB/ledger/blockStore/common"
 	"HNB/ledger/stateStore"
-	"errors"
+	ssComm "HNB/ledger/stateStore/common"
 	"HNB/logging"
+	"errors"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
 )
 
 // 系统数据在本文件中涉及存储，合约数据都在stateStore里面存储
 
 var LedgerLog logging.LogModule
-const(
+
+const (
 	LOGTABLE_LEDGER string = "ledger"
 )
 
-
-type ledgerHandler struct{
-	dbHandler dbComm.KVStore
+type ledgerHandler struct {
+	dbHandler    dbComm.KVStore
 	blockHandler bsComm.BlockStore
 	stateHandler ssComm.StateStore
 }
 
 var lh *ledgerHandler
 
-func InitLedger(db dbComm.KVStore) error{
+func InitLedger(db dbComm.KVStore) error {
 	LedgerLog = logging.GetLogIns()
-	LedgerLog.Info(LOGTABLE_LEDGER,"Init ledger")
+	LedgerLog.Info(LOGTABLE_LEDGER, "Init ledger")
 	lh = &ledgerHandler{}
 	lh.dbHandler = db
 	lh.blockHandler = blockStore.NewBlockStore(db)
@@ -37,13 +38,13 @@ func InitLedger(db dbComm.KVStore) error{
 	return nil
 }
 
-func SetContractState(state *ssComm.StateSet) error{
+func SetContractState(state *ssComm.StateSet) error {
 	lh.dbHandler.NewBatch()
-	if state != nil && state.SI != nil{
-		for _,v := range state.SI{
-			if v.State == ssComm.Deleted{
+	if state != nil && state.SI != nil {
+		for _, v := range state.SI {
+			if v.State == ssComm.Deleted {
 				lh.stateHandler.DeleteState(v.ChainID, v.Key)
-			}else{
+			} else {
 				lh.stateHandler.SetState(v.ChainID, v.Key, v.Value)
 			}
 		}
@@ -52,23 +53,23 @@ func SetContractState(state *ssComm.StateSet) error{
 	return nil
 }
 
-func WriteLedger(block *bsComm.Block, state *ssComm.StateSet) error{
+func WriteLedger(block *bsComm.Block, state *ssComm.StateSet) error {
 	h, err := GetBlockHeight()
-	if err != nil{
+	if err != nil {
 		return nil
 	}
 
-	if block.BlockNum != h{
+	if block.BlockNum != h {
 		return errors.New("height invalid")
 	}
 
 	lh.dbHandler.NewBatch()
 	lh.blockHandler.WriteBlock(block)
-	if state != nil && state.SI != nil{
-		for _,v := range state.SI{
-			if v.State == ssComm.Deleted{
+	if state != nil && state.SI != nil {
+		for _, v := range state.SI {
+			if v.State == ssComm.Deleted {
 				lh.stateHandler.DeleteState(v.ChainID, v.Key)
-			}else{
+			} else {
 				lh.stateHandler.SetState(v.ChainID, v.Key, v.Value)
 			}
 		}
@@ -80,23 +81,33 @@ func WriteLedger(block *bsComm.Block, state *ssComm.StateSet) error{
 	return nil
 }
 
-func GetContractState(chainID string, key []byte) ([]byte, error){
+func GetContractState(chainID string, key []byte) ([]byte, error) {
 	return lh.stateHandler.GetState(chainID, key)
 }
 
-func RollBackLedger(blockNum uint64) error{
+func RollBackLedger(blockNum uint64) error {
 	GetStateSet([]byte("test"))
 	return nil
 }
 
-func GetBlock(blkNum uint64) (*bsComm.Block, error){
+func GetBlock(blkNum uint64) (*bsComm.Block, error) {
 	return lh.blockHandler.GetBlock(blkNum)
 }
 
-func GetBlockHash(blkNum uint64) ([]byte, error){
+func GetBlockHash(blkNum uint64) ([]byte, error) {
+	//todo
+	//return msp.Hash256([]byte("todo"))
 	return lh.blockHandler.GetBlockHash(blkNum)
+	//return lh.blockHandler.GetBlockHash(blkNum)
 }
 
-func CalcBlockHash(block *bsComm.Block) ([]byte, error){
-	return nil, nil
+//todo
+func CalcBlockHash(block *bsComm.Block) ([]byte, error) {
+	//return msp.Hash256([]byte("todo"))
+	//return nil, nil
+	return lh.blockHandler.CalcBlockHash(block)
+}
+
+func CalcHashRoot(hasher [][]byte) []byte {
+	return merkle.SimpleHashFromByteslices(hasher)
 }
