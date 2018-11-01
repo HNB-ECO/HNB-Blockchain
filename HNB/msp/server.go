@@ -5,64 +5,74 @@ import (
 	"HNB/bccsp/sw"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"math/big"
 	"fmt"
 
-	"github.com/juju/errors"
 	"HNB/bccsp/factory"
+	"HNB/bccsp/secp256k1"
 	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
+	"github.com/juju/errors"
 )
 
+/*
+	公钥转字符串
+*/
+func PubKeyToString(keyType int, pubKey interface{}) string {
 
+	switch keyType {
 
-func GetBccspKeyFromPubKey(pubkey string) bccsp.Key{
-
-	key, err := PubKeyDecode(keyPair.Scheme, pubkey)
-	if err != nil {
-		MSPLog.Errorf(LOGTABLE_MSP, "PubKeyDecode %s", err.Error())
-		return nil
+	case ECDSAP256:
+		key := pubKey.(*sw.Ecdsa256K1PublicKey).PubKey
+		pkBytes := elliptic.Marshal(secp256k1.S256(), key.X, key.Y)
+		return ByteToHex(pkBytes)
 	}
-	return key
+	return ""
 }
 
-func GetPeerPubStr() string{
+func StringToBccspKey(pubkey string) bccsp.Key {
+
+	keyType := keyPair.Scheme
+	switch keyType {
+	case ECDSAP256:
+		pkEcc := new(ecdsa.PublicKey)
+		pkEcc.X, pkEcc.Y = elliptic.Unmarshal(secp256k1.S256(), HexToByte(pubkey))
+		pk := sw.Ecdsa256K1PublicKey{pkEcc}
+		return &pk
+	}
+
+	return nil
+}
+
+func GetPeerPubStr() string {
 	return PubKeyToString(keyPair.Scheme, keyPair.PubKey)
 }
 
-func GetPubStrFromO(Scheme int, pubKey bccsp.Key) string{
+func BccspKeyToString(Scheme int, pubKey bccsp.Key) string {
 	return PubKeyToString(Scheme, pubKey)
 }
 
 func GetPeerID() []byte {
-	ID, err := hex.DecodeString(GetPeerPubStr())
-	if err != nil {
-		MSPLog.Errorf(LOGTABLE_MSP, "DecodeString %s", err.Error())
-		return nil
-	}
+	ID := HexToByte(GetPeerPubStr())
 	return ID
 }
-func GetPubStrFromPeerID(ID []byte) string {
-	return hex.EncodeToString(ID)
+
+func PeerIDToString(ID []byte) string {
+	return ByteToHex(ID)
 }
 
-func GetPubBytesFromStr(pubKeyStr string) []byte{
-	id,_ := hex.DecodeString(pubKeyStr)
+func StringToByteKey(pubKeyStr string) []byte {
+	id := HexToByte(pubKeyStr)
 	return id
 }
 
+func CalcAddrFromPubBytes(PubKeyBytes []byte) ([]byte, error) {
 
-func Hash256(msg []byte) ([]byte, error){
-	hash256 := sha256.New()
-	hash256.Write(msg)
-	return hash256.Sum(nil), nil
+	return DoubleHash256(PubKeyBytes)
 }
 
 func Sign(msg []byte) (signature []byte, err error) {
 	bccspInstance := factory.GetDefault()
 
-	if msg == nil  {
+	if msg == nil {
 		return nil, errors.New("msg  is nil")
 	}
 
@@ -80,7 +90,6 @@ func Sign(msg []byte) (signature []byte, err error) {
 	}
 }
 
-
 func Verify(pubKey bccsp.Key, signature, msg []byte) (valid bool, err error) {
 	bccspInstance := factory.GetDefault()
 
@@ -95,96 +104,23 @@ func Verify(pubKey bccsp.Key, signature, msg []byte) (valid bool, err error) {
 
 	switch keyPair.Scheme {
 	case ECDSAP256:
-		return bccspInstance.Verify(pubKey, signature, digest, nil)
+		signV := signature[:len(signature)-1]
+		return bccspInstance.Verify(pubKey, signV, digest, nil)
 
 	default:
 		return false, fmt.Errorf("private key %v not supported", pubKey)
 	}
 }
 
-
-func PubKeyToString(keyType int, pubKey interface{}) string {
-
-	switch keyType {
-
-	case ECDSAP256:
-		keyInterf := pubKey.(*sw.EcdsaPublicKey).PubKey
-		return PubKeyToString2(keyType, keyInterf)
-
-	}
-	return ""
+func Hash256(msg []byte) ([]byte, error) {
+	hash256 := sha256.New()
+	hash256.Write(msg)
+	return hash256.Sum(nil), nil
 }
 
-func PubKeyToString2(keyType int, CommPub interface{}) string {
-	switch keyType {
-
-	case ECDSAP256:
-		return GenKey(256, CommPub)
-
-	default:
-
-	}
-
-	return ""
-
-}
-
-func GenKey(algLength int, CommPub interface{}) string {
-	pubKey := CommPub.(*ecdsa.PublicKey)
-
-	xPubKey := pubKey.X.Text(16)
-	yPubKey := pubKey.Y.Text(16)
-
-	xLenPK := len(xPubKey)
-	yLenPK := len(yPubKey)
-
-	xZero := (algLength/8)*2 - xLenPK
-	yZero := (algLength/8)*2 - yLenPK
-
-	var zero string
-	for i := 0; i < xZero; i++ {
-		zero += "0"
-	}
-
-	xPubKey = zero + xPubKey
-
-	zero = ""
-	for i := 0; i < yZero; i++ {
-		zero += "0"
-	}
-	yPubKey = zero + yPubKey
-
-	return xPubKey + yPubKey
-}
-
-func PubKeyDecode(algType int, codeStr string) (pubKey bccsp.Key, err error) {
-
-        var paramS string
-        switch algType {
-
-        case ECDSAP256:
-                if paramS == "" {
-                        paramS = "{\"P\":115792089210356248762697446949407573530086143415290314195533631308867097853951,\"N\":115792089210356248762697446949407573529996955224135760342422259061068512044369,\"B\":41058363725152142129326129780047268409114441015993725554835256314039467401291,\"Gx\":48439561293906451759052585252797914202762949526041747995844080717082404635286,\"Gy\":36134250956749795798585127919587881956611106672985015071877198253568414405109,\"BitSize\":256,\"Name\":\"P-256\"}"
-                }
-                param := &elliptic.CurveParams{}
-                json.Unmarshal([]byte(paramS), param)
-                algLength := 256
-                fmt.Printf("bitsize:%d, key:%s\n", algLength, codeStr)
-
-                pk := &ecdsa.PublicKey{X: &big.Int{}, Y: &big.Int{}}
-
-                pk.Curve = param
-
-                /*algLength/8 transfer byte, X,byte to string double char*/
-                pk.X.SetString(codeStr[0:((algLength+7)/8)*2], 16)
-
-                /*algLength/8 transfer byte, Y,byte to string double char*/
-                pk.Y.SetString(codeStr[((algLength+7)/8)*2:((algLength+7)/8)*2*2], 16)
-
-                return &sw.EcdsaPublicKey{PubKey: pk}, nil
-
-        }
-        return nil, errors.New("algType not exist")
+func DoubleHash256(msg []byte) ([]byte, error) {
+	hash, _ := Hash256(msg)
+	return Hash256(hash)
 }
 
 func Hash(msg []byte) (digest []byte, err error) {
@@ -195,12 +131,20 @@ func Hash(msg []byte) (digest []byte, err error) {
 	}
 
 	switch keyPair.Scheme {
-
 	case ECDSAP256:
 		return bccspInstance.Hash(msg, &bccsp.SHA256Opts{})
 	default:
-		return nil, fmt.Errorf("%s not supported", keyPair.Scheme)
+		return nil, fmt.Errorf("%d not supported", keyPair.Scheme)
 	}
 }
 
+func GetAlgType() int {
+	return keyPair.Scheme
+}
 
+//func rlpHash(x interface{}) (h []byte) {
+//	hw := sha3.NewKeccak256()
+//	rlp.Encode(hw, x)
+//	hw.Sum(h[:0])
+//	return h
+//}
