@@ -2,17 +2,13 @@ package msp
 
 import (
 	"HNB/bccsp"
-	"bytes"
-	//"crypto/ecdsa"
-	//"crypto/elliptic"
-	//"encoding/json"
-	//"errors"
-	"fmt"
-	//"math/big"
-	"strconv"
 	"HNB/bccsp/factory"
+	"HNB/bccsp/secp256k1"
 	"HNB/bccsp/sw"
-	"crypto/ecdsa"
+	"bytes"
+	"crypto/elliptic"
+	"fmt"
+	"strconv"
 )
 
 const (
@@ -25,10 +21,6 @@ const (
 	RSA2048   = 6
 	ED25519   = 7
 )
-
-
-
-
 
 //byte转16进制字符串
 func ByteToHex(data []byte) string {
@@ -59,17 +51,13 @@ func HexToByte(hex string) []byte {
 	return slice
 }
 
-
-
-
-
 func GeneratePriKey(algType int) (bccsp.Key, error) {
 
 	bccspInstance := factory.GetDefault()
 
 	switch algType {
 	case ECDSAP256: //ECDSAP256-SHA256
-		priKey, err := bccspInstance.KeyGen(&bccsp.ECDSAP256KeyGenOpts{Temporary:true})
+		priKey, err := bccspInstance.KeyGen(&bccsp.ECDSAP256K1KeyGenOpts{Temporary: true})
 		if err != nil {
 			return nil, err
 		}
@@ -83,62 +71,37 @@ func GeneratePriKey(algType int) (bccsp.Key, error) {
 	return nil, nil
 }
 
-func ImportPriKey(algType int, priByte []byte) (bccsp.Key, error) {
-
-	bccspInstance := factory.GetDefault()
-
-	switch algType {
-
-	case ECDSAP256: //ECDSAP256-SHA256
-		priKey, err := bccspInstance.KeyImport(priByte, &bccsp.ECDSAPrivateKeyImportOpts{Temporary:true})
-		if err != nil {
-			return nil, err
-		}
-		return priKey, nil
-
-	default: //
-		fmt.Printf("algType not support : %v\n", algType)
-		return nil, fmt.Errorf("algType not support")
-	}
-
-	return nil, nil
-}
-
-func GethashFucName(algType int) string {
-	hashFucName := ""
-
+func GetPriKey(algType int, key bccsp.Key) (interface{}, error) {
 	switch algType {
 
 	case ECDSAP256:
-		hashFucName = bccsp.SHA256
-	}
-
-	if hashFucName == "" {
-		fmt.Println("unknown type %d", algType)
-		return ""
-	}
-	return hashFucName
-}
-
-func GetPriKey(algType int, key bccsp.Key ) (interface{}, error){
-	switch algType  {
-
-	case ECDSAP256:
-		priKey := key.(*sw.EcdsaPrivateKey).PrivKey
+		priKey := key.(*sw.Ecdsa256K1PrivateKey).PrivKey
 		return priKey, nil
 	default:
 		fmt.Printf("algType not support : %v\n", algType)
 		return nil, fmt.Errorf("algType not support")
 	}
 	return nil, nil
-
 }
 
-func GetPubKey(algType int, key bccsp.Key ) (interface{}, error){
-	switch algType  {
+func GetPriKeyBytes(algType int, key bccsp.Key) ([]byte, error) {
+	switch algType {
 
 	case ECDSAP256:
-		pubKey := key.(*sw.EcdsaPublicKey).PubKey
+		priKey := key.(*sw.Ecdsa256K1PrivateKey).PrivKey.D.Bytes()
+		return priKey, nil
+	default:
+		fmt.Printf("algType not support : %v\n", algType)
+		return nil, fmt.Errorf("algType not support")
+	}
+	return nil, nil
+}
+
+func GetPubKey(algType int, key bccsp.Key) (interface{}, error) {
+	switch algType {
+
+	case ECDSAP256:
+		pubKey := key.(*sw.Ecdsa256K1PublicKey).PubKey
 		return pubKey, nil
 	default:
 		fmt.Printf("algType not support : %v\n", algType)
@@ -148,32 +111,16 @@ func GetPubKey(algType int, key bccsp.Key ) (interface{}, error){
 
 }
 
-func BuildPriKey(algType int, key interface{}) (bccsp.Key, error) {
-	switch algType  {
-
+func GetPubKeyBytes(algType int, key bccsp.Key) ([]byte, error) {
+	switch algType {
 	case ECDSAP256:
-		priKey := key.(*ecdsa.PrivateKey)
-		return &sw.EcdsaPrivateKey{PrivKey:priKey}, nil
+		pk := key.(*sw.Ecdsa256K1PublicKey)
+		pubkeyBytes := elliptic.Marshal(secp256k1.S256(), pk.PubKey.X, pk.PubKey.Y)
+		return pubkeyBytes, nil
 	default:
 		fmt.Printf("algType not support : %v\n", algType)
 		return nil, fmt.Errorf("algType not support")
 	}
 	return nil, nil
+
 }
-
-func BuildPubKey(algType int, key interface{}) (bccsp.Key, error) {
-	switch algType  {
-
-	case ECDSAP256:
-		pubKey := key.(*ecdsa.PublicKey)
-		return &sw.EcdsaPublicKey{PubKey:pubKey}, nil
-	default:
-		fmt.Printf("algType not support : %v\n", algType)
-		return nil, fmt.Errorf("algType not support")
-	}
-	return nil, nil
-}
-
-
-
-
