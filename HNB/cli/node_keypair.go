@@ -1,32 +1,30 @@
 package cli
 
 import (
-	"github.com/urfave/cli"
+	"HNB/bccsp"
+	"HNB/bccsp/secp256k1"
+	"HNB/bccsp/sw"
+	"HNB/cli/utils"
+	"HNB/msp"
 	"bufio"
-	"os"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli/utils"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"fmt"
-	"encoding/json"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli/common"
-	"io/ioutil"
-	bccspUtils "github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/utils"
-	//"HNB/bccsp/sw"
+	"github.com/urfave/cli"
+	"math/big"
+	"os"
 )
 
 const (
 	DEFAULT_KEYPAIR_FILE_NAME = "./node.key"
 )
 
-
-
-
 var (
 	NodeKeypairCommand = cli.Command{
-		Action:    cli.ShowSubcommandHelp,
-		Name:      "nodekeypair",
-		Usage:     "Manage nodekeypair",
-		ArgsUsage: "[arguments...]",
+		Action:      cli.ShowSubcommandHelp,
+		Name:        "nodekeypair",
+		Usage:       "Manage nodekeypair",
+		ArgsUsage:   "[arguments...]",
 		Description: `nodekeypair create keypair and store`,
 		Subcommands: []cli.Command{
 			{
@@ -39,7 +37,6 @@ var (
 					utils.DefaultFlag,
 					utils.FileFlag,
 				},
-
 			},
 			{
 				Action:    readPubKey,
@@ -54,28 +51,35 @@ var (
 	}
 )
 
-func readPubKey(ctx *cli.Context) error{
+func readPubKey(ctx *cli.Context) error {
 	filePath := checkFileName(ctx)
-	key,err := msp.Load(filePath)
-	if err != nil{
-		return err
-	}
-	sPriKey, err := bccspUtils.PEMtoPrivateKey(key.PriKey, nil)
-	if err != nil {
-		return err
-	}
-	sk, err := msp.BuildPriKey(key.Scheme, sPriKey)
+	sKeyPair, err := msp.Load(filePath)
 	if err != nil {
 		return err
 	}
 
-	keyO, err := sk.PublicKey()
-	if err != nil {
-		return err
+	var keyO bccsp.Key
+
+	algType := sKeyPair.Scheme
+	switch algType {
+	case msp.ECDSAP256:
+		key := new(ecdsa.PrivateKey)
+		key.Curve = secp256k1.S256()
+		key.D = new(big.Int)
+		key.D.SetBytes(sKeyPair.PriKey)
+		key.PublicKey.X, key.PublicKey.Y = elliptic.Unmarshal(secp256k1.S256(), sKeyPair.PubKey)
+
+		keyO = &sw.Ecdsa256K1PublicKey{&key.PublicKey}
+
+	default:
+		fmt.Printf("algType not support : %v\n", algType)
+		return fmt.Errorf("algType not support")
 	}
 
-	keyStr := msp.GetPubStrFromO(key.Scheme, keyO)
-	fmt.Println(keyStr)
+	keyStr := msp.BccspKeyToString(sKeyPair.Scheme, keyO)
+	address := msp.AccountPubkeyToAddress1(keyO)
+
+	fmt.Printf("pubkey:%s, address:%x\n", keyStr, address)
 	return nil
 }
 
@@ -98,7 +102,7 @@ func keypairCreate(ctx *cli.Context) error {
 		fmt.Println(err)
 		return fmt.Errorf("new node keypair error:%s", err)
 	}
-	err = save(keyPair, optionPath)
+	err = msp.Save(keyPair, optionPath)
 
 	if err != nil {
 		fmt.Println(err)
@@ -110,79 +114,19 @@ func keypairCreate(ctx *cli.Context) error {
 }
 
 func NewKeyPair(scheme int) (*msp.KeyPair, error) {
-	fmt.Println(0)
 	prvkey, err := msp.GeneratePriKey(scheme)
 	if err != nil {
 		fmt.Println(err)
 		return nil, fmt.Errorf("generateKeyPair error:%s", err)
 	}
-	fmt.Println(1)
-	pubkey, err  := prvkey.PublicKey()
+	pubkey, err := prvkey.PublicKey()
 	if err != nil {
-		return nil ,err
+		return nil, err
 	}
-	fmt.Println(1)
 	keyPair := &msp.KeyPair{
-		Scheme:scheme,
-		PriKey:prvkey,
-		PubKey:pubkey,
+		Scheme: scheme,
+		PriKey: prvkey,
+		PubKey: pubkey,
 	}
 	return keyPair, nil
 }
-
-func save(keypair *msp.KeyPair, path string) error {
-	priKey , err := msp.GetPriKey(keypair.Scheme, keypair.PriKey)
-	if err != nil {
-		return err
-	}
-	sPriKey, err := bccspUtils.PrivateKeyToPEM(priKey, nil)
-	if err != nil {
-		return err
-	}
-	pubKey , err := msp.GetPubKey(keypair.Scheme, keypair.PubKey)
-	if err != nil {
-		return err
-	}
-	sPubKey, err := bccspUtils.PublicKeyToPEM(pubKey, nil)
-	if err != nil {
-		return err
-	}
-	saveKP := &msp.SaveKeyPair{
-		Scheme:keypair.Scheme,
-		PubKey:sPubKey,
-		PriKey:sPriKey,
-	}
-	data, err := json.Marshal(saveKP)
-	if err != nil {
-		return err
-	}
-	if common.FileExisted(path) {
-		filename := path + "~"
-		err := ioutil.WriteFile(filename, data, 0644)
-		if err != nil {
-			return err
-		}
-		return os.Rename(filename, path)
-	} else {
-		return ioutil.WriteFile(path, data, 0644)
-	}
-	//keyStore, err := sw.NewFileBasedKeyStore(nil, path, false)
-	//if err != nil {
-	//	return err
-	//}
-	//err = keyStore.StoreKey(keypair.PriKey)
-	//if err != nil {
-	//	return err
-	//}
-	//if common.FileExisted(idPath) {
-	//	filename := idPath + "~"
-	//	err := ioutil.WriteFile(filename, keypair.PriKey.SKI(), 0644)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	return os.Rename(filename, idPath)
-	//} else {
-	//	return ioutil.WriteFile(idPath, keypair.PriKey.SKI(), 0644)
-	//}
-}
-
