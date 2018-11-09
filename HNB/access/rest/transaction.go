@@ -17,7 +17,9 @@ import (
 func (*serverREST) QueryMsg(rw web.ResponseWriter, req *web.Request) {
 	rw.WriteHeader(http.StatusOK)
 	encoder := json.NewEncoder(rw)
+
 	addr := req.PathParams["addr"]
+
 	msg, err := appMgr.Query("hgs", util.HexToByte(addr))
 	var retMsg interface{}
 	if err != nil {
@@ -37,11 +39,13 @@ type AccountLock struct {
 var AccLockMgr AccountLock
 
 func (alm AccountLock) Lock(address common.Address) {
+
+	alm.rw.Lock()
+	defer alm.rw.Unlock()
+
 	if alm.accLock == nil {
 		alm.accLock = make(map[common.Address]*sync.RWMutex)
 	}
-	alm.rw.Lock()
-	defer alm.rw.Unlock()
 
 	lock, ok := alm.accLock[address]
 	if !ok {
@@ -65,21 +69,30 @@ func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
 	rw.WriteHeader(http.StatusOK)
 	encoder := json.NewEncoder(rw)
 	reqBody, _ := ioutil.ReadAll(req.Body)
-	msgTx := common.NewTransaction()
-	msgTx.Payload = reqBody
-	msgTx.Type = "hgs"
+	msgTx := common.Transaction{}
 
+	err := json.Unmarshal(reqBody, &msgTx)
+	if err != nil {
+		msg := fmt.Sprintf("reqBody err:%v", err.Error())
+		retMsg := FormatQueryResResult("0001", msg, nil)
+		encoder.Encode(retMsg)
+		return
+	}
+
+	address := msp.AccountPubkeyToAddress()
 	if msgTx.NonceValue == 0 {
-		address := msp.AccountPubkeyToAddress()
 		AccLockMgr.Lock(address)
 		defer AccLockMgr.UnLock(address)
+
 		msgTx.NonceValue = txpool.GetPendingNonce(address)
 	}
 
-	signer := msp.MakeSigner()
-	msgTx.Txid = signer.Hash(msgTx)
+	msgTx.From = address
 
-	msgTxWithSign, err := msp.SignTx(msgTx, signer)
+	signer := msp.GetSigner()
+	msgTx.Txid = signer.Hash(&msgTx)
+
+	msgTxWithSign, err := msp.SignTx(&msgTx, signer)
 	if err != nil {
 		msg := fmt.Sprintf("sign err:%v", err.Error())
 		retMsg := FormatQueryResResult("0001", msg, nil)
