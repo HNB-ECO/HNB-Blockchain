@@ -4,94 +4,99 @@ import (
 	appComm "HNB/appMgr/common"
 	"HNB/logging"
 	"encoding/json"
+	"github.com/pkg/errors"
 	"strconv"
-	"errors"
+	"HNB/util"
+	"bytes"
 )
 
-
 var HgsLog logging.LogModule
-const(
+
+const (
 	LOGTABLE_HGS string = "hgs"
 )
 
-type hsgTx struct{
-	InputAddr []byte `json:"input"`
+type hsgTx struct {
 	OutputAddr []byte `json:"output"`
-	Amount int64 `json:"amount"`
-	Signature []byte `json:"signature"`
+	Amount     int64          `json:"amount"`
 }
 
 type hgs struct {
-
 }
 
+var user = []string{"68175250cadc6f2524f55e891e244116fec4b690"}
 
-var user = []string{"test1", "test2", "test3", "test4"}
-
-func GetContractHandler() (appComm.ContractInf, error){
+func GetContractHandler() (appComm.ContractInf, error) {
 	HgsLog = logging.GetLogIns()
 	HgsLog.Info(LOGTABLE_HGS, "Invoke Init func")
 	return &hgs{}, nil
 }
 
-func InstallContract(ca appComm.ContractApi) error{
+func InstallContract(ca appComm.ContractApi) error {
 	HgsLog = logging.GetLogIns()
 	HgsLog.Info(LOGTABLE_HGS, "Install Contract")
 	amountS := strconv.FormatInt(10000000, 10)
-	amountS1 := strconv.FormatInt(20000000, 10)
-	ca.PutState([]byte("zhangsan"), []byte(amountS))
-	ca.PutState([]byte("lisi"), []byte(amountS1))
 
-	for _, v := range user{
-		ca.PutState([]byte(v), []byte(amountS))
+	//TODO 从配置文件初始化账户余额
+	for _, v := range user {
+		ca.PutState(util.HexToByte(v), []byte(amountS))
 	}
 
 	return nil
 }
 
-func (h *hgs)Init() error{
+func (h *hgs) Init() error {
 	return nil
 }
 
+func (h *hgs) Invoke(ca appComm.ContractApi) error {
+	HgsLog.Debugf(LOGTABLE_HGS, "Invoke args: %v", ca.GetArgs())
 
-func (h *hgs)Invoke(ca appComm.ContractApi) error{
-	HgsLog.Info(LOGTABLE_HGS, "Invoke args:" + ca.GetStringArgs())
-	arg := ca.GetStringArgs()
+	arg := ca.GetArgs()
 	hx := hsgTx{}
 	err := json.Unmarshal([]byte(arg), &hx)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
-	input, _ := ca.GetState(hx.InputAddr)
-	if input == nil{
+	fromAddr := ca.GetFrom()
+	from := fromAddr.GetBytes()
+
+	if bytes.Compare(from, hx.OutputAddr) == 0{
+		return errors.New("in and out addr same")
+	}
+
+	input, _ := ca.GetState(from)
+	if input == nil {
 		return errors.New("input not exist")
 	}
 
-	inputAmount,_ := strconv.ParseInt(string(input), 10 ,64)
+	inputAmount, _ := strconv.ParseInt(string(input), 10, 64)
 
-	if inputAmount < hx.Amount{
+	if inputAmount < hx.Amount {
 		return errors.New("insufficient balance")
 	}
 
 	var bAmount int64 = 0
+	//addr := common.Address{}
+	//addr.SetBytes(hx.OutputAddr)
 	output, _ := ca.GetState(hx.OutputAddr)
-	if output != nil{
-		bAmount,_ = strconv.ParseInt(string(output), 10 ,64)
+	if output != nil {
+		bAmount, _ = strconv.ParseInt(string(output), 10, 64)
 	}
 
-	a := strconv.FormatInt(inputAmount - hx.Amount, 10)
-	b := strconv.FormatInt(bAmount + hx.Amount, 10)
-	ca.PutState([]byte(hx.InputAddr), []byte(a))
-	ca.PutState([]byte(hx.OutputAddr), []byte(b))
+	a := strconv.FormatInt(inputAmount-hx.Amount, 10)
+	b := strconv.FormatInt(bAmount+hx.Amount, 10)
+	ca.PutState(from, []byte(a))
+	ca.PutState(hx.OutputAddr, []byte(b))
 
 	return nil
 }
 
-func (h *hgs)Query(ca appComm.ContractApi) ([]byte, error){
-	HgsLog.Info(LOGTABLE_HGS, "Query args:" + ca.GetStringArgs())
-
-	addr := ca.GetStringArgs()
-	value,_ := ca.GetState([]byte(addr))
+func (h *hgs) Query(ca appComm.ContractApi) ([]byte, error) {
+	HgsLog.Infof(LOGTABLE_HGS, "Query args:%v", ca.GetArgs())
+	addr := ca.GetArgs()
+	value, _ := ca.GetState(addr)
 	return value, nil
 }
+
