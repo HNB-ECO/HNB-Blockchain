@@ -1,55 +1,113 @@
 package rest
 
 import (
-	"HNB/config"
-	"HNB/logging"
+	"HNB/appMgr"
+	"HNB/common"
+	"HNB/msp"
+	"HNB/txpool"
+	"HNB/util"
+	"encoding/json"
+	"fmt"
 	"github.com/gocraft/web"
+	"io/ioutil"
 	"net/http"
-	"strconv"
+	"sync"
 )
 
-var RestLog logging.LogModule
+func (*serverREST) QueryMsg(rw web.ResponseWriter, req *web.Request) {
+	rw.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(rw)
 
-const (
-	LOGTABLE_REST string = "rest"
-)
+	addr := req.PathParams["addr"]
 
-var router *web.Router
-
-type serverREST struct {
-}
-
-func (s *serverREST) SetResponseType(rw web.ResponseWriter, req *web.Request, next web.NextMiddlewareFunc) {
-	rw.Header().Set("Content-Type", "application/json")
-	rw.Header().Set("Access-Control-Allow-Origin", "*")
-	rw.Header().Set("Access-Control-Allow-Headers", "accept, content-type")
-	next(rw, req)
-}
-
-// 构建router & 向router中注册url
-func buildOpenchainRESTRouter() *web.Router {
-	s := serverREST{}
-	router = web.New(s)
-	router.Middleware((*serverREST).SetResponseType)
-	router.Get("/getaddr", (*serverREST).GetAddr)
-	router.Get("/querymsg/:addr", (*serverREST).QueryMsg)
-	router.Post("/sendtxmsg", (*serverREST).SendTxMsg)
-	router.Get("/blockheight", (*serverREST).BlockHeight)
-	router.Get("/block/:blkNum", (*serverREST).Block)
-	router.Get("/querytx/:txHash", (*serverREST).TxHash)
-
-	return router
-}
-
-func StartRESTServer() {
-	router := buildOpenchainRESTRouter()
-	port := strconv.FormatUint(uint64(config.Config.RestPort), 10)
-
-	RestLog = logging.GetLogIns()
-	RestLog.Info(LOGTABLE_REST, "rest start port: "+port)
-
-	err := http.ListenAndServe(":"+port, router)
+	msg, err := appMgr.Query("hgs", util.HexToByte(addr))
+	var retMsg interface{}
 	if err != nil {
-		panic(err)
+		retMsg = FormatQueryResResult("0001", err.Error(), string(msg))
+	} else {
+		retMsg = FormatQueryResResult("0000", "", string(msg))
 	}
+
+	encoder.Encode(retMsg)
 }
+
+type AccountLock struct {
+	rw      sync.RWMutex
+	accLock map[common.Address]*sync.RWMutex
+}
+
+var AccLockMgr AccountLock
+
+func (alm *AccountLock) Lock(address common.Address) {
+
+	alm.rw.Lock()
+	defer alm.rw.Unlock()
+
+	if alm.accLock == nil {
+		alm.accLock = make(map[common.Address]*sync.RWMutex)
+	}
+
+	lock, ok := alm.accLock[address]
+	if !ok {
+		lock = &sync.RWMutex{}
+		alm.accLock[address] = lock
+	}
+
+	lock.Lock()
+}
+
+func (alm *AccountLock) UnLock(address common.Address) {
+
+	alm.rw.RLock()
+	defer alm.rw.RUnlock()
+
+	lock, _ := alm.accLock[address]
+	lock.Unlock()
+}
+
+func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
+	rw.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(rw)
+	reqBody, _ := ioutil.ReadAll(req.Body)
+	msgTx := common.Transaction{}
+
+	err := json.Unmarshal(reqBody, &msgTx)
+	if err != nil {
+		msg := fmt.Sprintf("reqBody err:%v", err.Error())
+		retMsg := FormatQueryResResult("0001", msg, nil)
+		encoder.Encode(retMsg)
+		return
+	}
+
+	address := msp.AccountPubkeyToAddress()
+	if msgTx.NonceValue == 0 {
+		AccLockMgr.Lock(address)
+		defer AccLockMgr.UnLock(address)
+
+		nonce := txpool.GetPendingNonce(address)
+		//if nonce == 0{
+		//	nonce = 1
+		//}
+		msgTx.NonceValue = nonce
+	}
+
+	msgTx.From = address
+
+	signer := msp.GetSigner()
+	msgTx.Txid = signer.Hash(&msgTx)
+
+	msgTxWithSign, err := msp.SignTx(&msgTx, signer)
+	if err != nil {
+		msg := fmt.Sprintf("sign err:%v", err.Error())
+		retMsg := FormatQueryResResult("0001", msg, nil)
+		encoder.Encode(retMsg)
+		return
+	}
+
+	mar, _ := json.Marshal(msgTxWithSign)
+	txpool.RecvTx(mar)
+
+	retMsg := FormatInvokeResResult("0000", "", msgTx.Txid)
+	encoder.Encode(retMsg)
+}
+
