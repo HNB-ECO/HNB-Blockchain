@@ -84,16 +84,17 @@ type PeerAddr struct {
 
 //const channel msg id and type
 const (
-	VERSION_TYPE     = "version"    //peer`s information
-	VERACK_TYPE      = "verack"     //ack msg after version recv
-	GetADDR_TYPE     = "getaddr"    //req nbr address from peer
-	ADDR_TYPE        = "addr"       //nbr address
-	PING_TYPE        = "ping"       //ping  sync height
-	PONG_TYPE        = "pong"       //pong  recv nbr height
-	TX_TYPE          = "tx"         //transaction
-	CONSENSUS_TYPE   = "consensus"  //consensus payload
-	DISCONNECT_TYPE  = "disconnect" //peer disconnect info raise by link
-	TEST_NETWORK = "testnetwork"
+	VERSION_TYPE    = "version"    //peer`s information
+	VERACK_TYPE     = "verack"     //ack msg after version recv
+	GetADDR_TYPE    = "getaddr"    //req nbr address from peer
+	ADDR_TYPE       = "addr"       //nbr address
+	PING_TYPE       = "ping"       //ping  sync height
+	PONG_TYPE       = "pong"       //pong  recv nbr height
+	DISCONNECT_TYPE = "disconnect" //peer disconnect info raise by link
+	TEST_NETWORK    = "testnetwork"
+	TX_TYPE         = "tx"
+	SYNC_TYPE       = "sync"
+	CONS_TYPE       = "cons"
 )
 
 type AppendPeerID struct {
@@ -103,6 +104,8 @@ type AppendPeerID struct {
 type RemovePeerID struct {
 	ID uint64 // The peer id
 }
+
+type NotifyFunc func([]byte, uint64)
 
 //type AppendHeaders struct {
 //	Headers []*types.Header // Headers to be added to the ledger
