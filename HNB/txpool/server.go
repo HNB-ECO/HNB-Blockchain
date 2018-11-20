@@ -1,6 +1,7 @@
 package txpool
+
 import (
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"HNB/common"
 )
 
 type TXPoolInf interface {
@@ -11,17 +12,25 @@ type TXPoolInf interface {
 }
 
 func RecvTx(msg []byte) {
-	TxPool.RecvTx(msg)
+	TxPoolIns.RecvTx(msg, 0)
 }
 
-func GetTxsFromTXPool(chainId string, count int) ([]*common.Transaction, error)  {
-	return TxPool.GetTxsFromTXPool(chainId, count)
+func GetTxsFromTXPool(chainId string, count int) ([]*common.Transaction, error) {
+	return TxPoolIns.GetTxsFromTXPool(chainId, count)
 }
 
-func TxsLen(chainId string) int  {
-	return TxPool.TxsLen(chainId)
+func DelTxs(chainId string, txs []*common.Transaction) {
+	TxPoolIns.DelTxs(chainId, txs)
 }
 
-func DelTxs(chainId string, txs []*common.Transaction)  {
-	TxPool.DelTxs(chainId, txs)
+func IsTxsLenZero(chainId string) bool {
+	return TxPoolIns.IsTxsLenZero(chainId)
+}
+
+func NotifyTx(chainId string) chan struct{} {
+	return TxPoolIns.NotifyTx()
+}
+
+func GetPendingNonce(address common.Address) uint64 {
+	return TxPoolIns.GetPendingNonce(address)
 }
