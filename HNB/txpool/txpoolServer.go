@@ -5,6 +5,9 @@ import (
 	"HNB/logging"
 	"HNB/p2pNetwork"
 	"fmt"
+	"github.com/pkg/errors"
+	//"HNB/p2pNetwork/message/reqMsg"
+	//"encoding/json"
 )
 
 var TXPoolLog logging.LogModule
@@ -14,6 +17,7 @@ var TxPoolIns *TXPoolServer
 const (
 	LOGTABLE_TXPOOL string = "txpool"
 	HGS             string = "hgs"
+	HNB             string = "hnb"
 )
 
 type TXPoolServer struct {
@@ -30,12 +34,30 @@ func NewTXPoolServer() *TXPoolServer {
 	return s
 }
 
-func (tps *TXPoolServer) RecvTx(msg []byte, msgSender uint64) {
+func (tps *TXPoolServer) RecvTx(msg []byte, msgSender uint64) error{
 	if msg == nil {
 		errStr := fmt.Sprintf("msg is nil")
 		TXPoolLog.Warning(LOGTABLE_TXPOOL, errStr)
-		return
+		return errors.New(errStr)
 	}
+
+	//tx := common.Transaction{}
+	//err := json.Unmarshal(msg, &tx)
+	//if err != nil {
+	//	TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
+	//	return err
+	//}
+	//
+	//if msgSender == 0{//local
+	//	m := reqMsg.NewTxMsg(msg)
+	//	p2pNetwork.Xmit(m, false)
+	//	tps.txpool.AddLocal(&tx)
+	//}else{
+	//	tps.txpool.AddRemote(&tx)
+	//}
+	//
+	//infoStr := fmt.Sprintf("recv tx  %v", tx)
+	//TXPoolLog.Debugf(LOGTABLE_TXPOOL, infoStr)
 
 	msgTx := &RecvTxStruct{}
 	if msgSender == 0{
@@ -47,6 +69,7 @@ func (tps *TXPoolServer) RecvTx(msg []byte, msgSender uint64) {
 
 	msgTx.recvTx = msg
 	tps.txpool.recvTx <- msgTx
+	return nil
 }
 
 func (tps *TXPoolServer) GetTxsFromTXPool(chainId string, count int) ([]*common.Transaction, error) {
