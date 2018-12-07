@@ -3,6 +3,7 @@ package appMgr
 import (
 	appComm "HNB/appMgr/common"
 	"HNB/contract/hgs"
+	"HNB/contract/hnb"
 	dbComm "HNB/db/common"
 	"HNB/ledger"
 	"HNB/ledger/blockStore/common"
@@ -10,6 +11,7 @@ import (
 	ssComm "HNB/ledger/stateStore/common"
 	"HNB/logging"
 	"HNB/msp"
+	"HNB/txpool"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -48,11 +50,13 @@ func InitAppMgr(db dbComm.KVStore) error {
 	am.db = db
 
 	hgsInstalled := false
+	hnbInstalled := false
+
 	iter := db.NewIterator([]byte("contract#"))
 
 	for iter.Next() {
 		appMgrLog.Infof(LOGTABLE_APPMGR, "installed contract %v", string(iter.Key()))
-		if bytes.Compare(iter.Key(), []byte("contract#"+"hgs")) == 0 {
+		if bytes.Compare(iter.Key(), []byte("contract#"+txpool.HGS)) == 0 {
 			hgsInstalled = true
 		}
 	}
@@ -61,7 +65,7 @@ func InitAppMgr(db dbComm.KVStore) error {
 
 	if hgsInstalled == false {
 		//安装智能合约
-		apiInf := GetContractApi("hgs")
+		apiInf := GetContractApi(txpool.HGS)
 		err := hgs.InstallContract(apiInf)
 		if err != nil {
 			return err
@@ -69,15 +73,40 @@ func InitAppMgr(db dbComm.KVStore) error {
 		s := &ssComm.StateSet{}
 		s.SI = apiInf.GetAllState()
 		ledger.SetContractState(s)
-		db.Put([]byte("contract#"+"hgs"), []byte("active"))
+		db.Put([]byte("contract#"+txpool.HGS), []byte("active"))
 	}
 
-	am.setHandler("hgs", hgsHandler)
-	err := initApp("hgs")
+	am.setHandler(txpool.HGS, hgsHandler)
+	//智能合约启动初始化
+	err := initApp(txpool.HGS)
 	if err != nil {
 		appMgrLog.Info(LOGTABLE_APPMGR, "init hgs app err:"+err.Error())
 	} else {
 		appMgrLog.Info(LOGTABLE_APPMGR, "init hgs app")
+	}
+
+	hnbHandler, _ := hnb.GetContractHandler()
+
+	if hnbInstalled == false {
+		//安装智能合约
+		apiInf := GetContractApi(txpool.HNB)
+		err := hnb.InstallContract(apiInf)
+		if err != nil {
+			return err
+		}
+		s := &ssComm.StateSet{}
+		s.SI = apiInf.GetAllState()
+		ledger.SetContractState(s)
+		db.Put([]byte("contract#"+txpool.HNB), []byte("active"))
+	}
+
+	am.setHandler(txpool.HNB, hnbHandler)
+	//智能合约启动初始化
+	err = initApp(txpool.HNB)
+	if err != nil {
+		appMgrLog.Info(LOGTABLE_APPMGR, "init hnb app err:"+err.Error())
+	} else {
+		appMgrLog.Info(LOGTABLE_APPMGR, "init hnb app")
 	}
 
 	return nil
@@ -165,4 +194,3 @@ func (am *appManager) getHandler(chainID string) (appComm.ContractInf, error) {
 
 	return handler, nil
 }
-
