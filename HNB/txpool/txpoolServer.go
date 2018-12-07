@@ -1,131 +1,122 @@
 package txpool
 
 import (
-	"sync"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"HNB/common"
+	"HNB/logging"
+	"HNB/p2pNetwork"
 	"fmt"
-	"errors"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
-	tpw "github.com/HNB-ECO/HNB-Blockchain/HNB/txpool/worker"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
-	"encoding/json"
+	"github.com/pkg/errors"
+	//"HNB/p2pNetwork/message/reqMsg"
+	//"encoding/json"
 )
+
 var TXPoolLog logging.LogModule
 
-var TxPool *TXPoolServer
-const(
+var TxPoolIns *TXPoolServer
+
+const (
 	LOGTABLE_TXPOOL string = "txpool"
 	HGS             string = "hgs"
+	HNB             string = "hnb"
 )
 
 type TXPoolServer struct {
-	sync.RWMutex
-	worker			map[string]*tpw.TXPoolWorker
+	txpool *TxPool
 }
 
 func NewTXPoolServer() *TXPoolServer {
 	TXPoolLog = logging.GetLogIns()
+
 	s := &TXPoolServer{
-		worker:make(map[string]*tpw.TXPoolWorker),
+		NewTxPool(DefaultTxPoolConfig),
 	}
-	TxPool = s
+	TxPoolIns = s
 	return s
 }
-func (tps *TXPoolServer) IsExists(chainId string) bool {
-	tps.Lock()
-	defer tps.Unlock()
-	_, ok := tps.worker[chainId]
-	return ok
-}
 
-func (tps *TXPoolServer) RecvTx(msg []byte) {
+func (tps *TXPoolServer) RecvTx(msg []byte, msgSender uint64) error{
 	if msg == nil {
 		errStr := fmt.Sprintf("msg is nil")
 		TXPoolLog.Warning(LOGTABLE_TXPOOL, errStr)
-		return
+		return errors.New(errStr)
 	}
-	tx := common.Transaction{}
-	err := json.Unmarshal(msg, &tx)
-	if err != nil {
-		TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
-		return
+
+	//tx := common.Transaction{}
+	//err := json.Unmarshal(msg, &tx)
+	//if err != nil {
+	//	TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
+	//	return err
+	//}
+	//
+	//if msgSender == 0{//local
+	//	m := reqMsg.NewTxMsg(msg)
+	//	p2pNetwork.Xmit(m, false)
+	//	tps.txpool.AddLocal(&tx)
+	//}else{
+	//	tps.txpool.AddRemote(&tx)
+	//}
+	//
+	//infoStr := fmt.Sprintf("recv tx  %v", tx)
+	//TXPoolLog.Debugf(LOGTABLE_TXPOOL, infoStr)
+
+	msgTx := &RecvTxStruct{}
+	if msgSender == 0{
+		msgTx.local = true
+	}else{
+		msgTx.local = false
 	}
-	worker, err := tps.GetServer(tx.Type)
-	if err != nil {
-		TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
-		return
-	}
-	infoStr := fmt.Sprintf("recv tx  %v", tx)
-	TXPoolLog.Debugf(LOGTABLE_TXPOOL, infoStr)
-	worker.RecvTx(&tx)
+	TXPoolLog.Debugf(LOGTABLE_TXPOOL, "recv msg local:%v", msgTx.local)
+
+	msgTx.recvTx = msg
+	tps.txpool.recvTx <- msgTx
+	return nil
 }
-
-func (tps * TXPoolServer) TxsLen(chainId string) int {
-	worker, err := tps.GetServer(chainId)
-	if err != nil {
-		TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
-		return 0
-	}
-	return worker.TxsLen()
-}
-
-func (tps *TXPoolServer) SetServer(chainId string, tpw *tpw.TXPoolWorker)  {
-	if chainId == "" || tpw == nil {
-		errStr := fmt.Sprintf("chainId[%s], tpw is nil[%t]", chainId, tpw == nil)
-		TXPoolLog.Warning(LOGTABLE_TXPOOL, errStr)
-		return
-	}
-	tps.Lock()
-	defer tps.Unlock()
-	if _, ok := tps.worker[chainId]; ok {
-		errStr := fmt.Sprintf("chainId exists")
-		TXPoolLog.Warning(LOGTABLE_TXPOOL, errStr)
-		return
-	}
-	tps.worker[chainId] = tpw
-	TXPoolLog.Infof(LOGTABLE_TXPOOL, "worker %v", tps.worker)
-}
-
-func (tps *TXPoolServer) GetServer(chainId string) (*tpw.TXPoolWorker, error) {
-	if chainId == "" {
-		errStr := fmt.Sprintf("chainId[%s] is nil", chainId)
-		return nil, errors.New(errStr)
-	}
-	tps.RLock()
-	defer tps.RUnlock()
-	tpw, ok := tps.worker[chainId]
-	if !ok {
-		errStr := fmt.Sprintf("chainId not exists")
-		return nil, errors.New(errStr)
-	}
-	return tpw, nil
-}
-
-func (tps *TXPoolServer) InitTXPoolServer() {
-	worker := tpw.NewTXPoolWorker()
-	tps.SetServer(HGS, worker)
-	p2pNetwork.RegisterTxNotify(tps.RecvTx)
-
-}
-
 
 func (tps *TXPoolServer) GetTxsFromTXPool(chainId string, count int) ([]*common.Transaction, error) {
-	worker, err := tps.GetServer(chainId)
+	txs, err := tps.txpool.Pending()
 	if err != nil {
-		TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
-		return nil, errors.New(err.Error())
+		return nil, err
 	}
-	return worker.GetTxsFromTXPool(count)
+
+	var dstTxs []*common.Transaction
+	var dstCount int = 0
+
+	for _, addrTxs := range txs {
+		for _, v := range addrTxs {
+			dstTxs = append(dstTxs, v)
+			dstCount++
+			if dstCount == count {
+				return dstTxs, nil
+			}
+		}
+	}
+
+	return dstTxs, nil
+}
+
+func (tps *TXPoolServer) Start() {
+	p2pNetwork.RegisterTxNotify(tps.RecvTx)
 }
 
 func (tps *TXPoolServer) DelTxs(chainId string, txs []*common.Transaction) {
-	worker, err := tps.GetServer(chainId)
-	if err != nil {
-		TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
-		return
-	}
-	worker.DelTxs(txs)
+	tps.txpool.recvBlkTxs <- txs
+}
+
+func (tps *TXPoolServer) IsTxsLenZero(chainId string) bool {
+	pending, _ := tps.txpool.Pending()
+	return len(pending) == 0
+}
+
+func (tps *TXPoolServer) NotifyTx() chan struct{} {
+	return tps.txpool.GetNotify()
+}
+
+func (tps *TXPoolServer) GetPendingNonce(address common.Address) uint64 {
+	return tps.txpool.State().GetNonce(address)
 }
 
 
+func (tps *TXPoolServer) GetContent() (map[common.Address]common.Transactions, map[common.Address]common.Transactions) {
+	return tps.txpool.Content()
+}
 

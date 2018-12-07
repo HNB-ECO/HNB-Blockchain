@@ -1,22 +1,24 @@
 package common
 
+import (
+	"HNB/common"
+)
 
-
-
-type ContractInf interface{
-//	InstallContract(ContractApi) error
+type ContractInf interface {
+	//	InstallContract(ContractApi) error
 
 	Init() error
 	Invoke(ContractApi) error
 	Query(ContractApi) ([]byte, error)
 }
 
-
-
-type ContractApi interface{
+type ContractApi interface {
 	PutState(key, value []byte) error
 	GetState(key []byte) ([]byte, error)
 	DelState(key []byte) error
-	GetStringArgs() string
+	GetArgs() []byte
+	SetFrom(address common.Address)
+	GetFrom() common.Address
+	GetOtherState(chainID string, key []byte) ([]byte, error)
+	PutOtherState(chainID string, key, value []byte) error
 }
-
