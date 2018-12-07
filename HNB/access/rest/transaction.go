@@ -19,8 +19,9 @@ func (*serverREST) QueryMsg(rw web.ResponseWriter, req *web.Request) {
 	encoder := json.NewEncoder(rw)
 
 	addr := req.PathParams["addr"]
+	chainID := req.PathParams["chainID"]
 
-	msg, err := appMgr.Query("hgs", util.HexToByte(addr))
+	msg, err := appMgr.Query(chainID, util.HexToByte(addr))
 	var retMsg interface{}
 	if err != nil {
 		retMsg = FormatQueryResResult("0001", err.Error(), string(msg))
@@ -38,7 +39,7 @@ type AccountLock struct {
 
 var AccLockMgr AccountLock
 
-func (alm AccountLock) Lock(address common.Address) {
+func (alm *AccountLock) Lock(address common.Address) {
 
 	alm.rw.Lock()
 	defer alm.rw.Unlock()
@@ -56,7 +57,7 @@ func (alm AccountLock) Lock(address common.Address) {
 	lock.Lock()
 }
 
-func (alm AccountLock) UnLock(address common.Address) {
+func (alm *AccountLock) UnLock(address common.Address) {
 
 	alm.rw.RLock()
 	defer alm.rw.RUnlock()
@@ -84,7 +85,11 @@ func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
 		AccLockMgr.Lock(address)
 		defer AccLockMgr.UnLock(address)
 
-		msgTx.NonceValue = txpool.GetPendingNonce(address)
+		nonce := txpool.GetPendingNonce(address)
+		//if nonce == 0{
+		//	nonce = 1
+		//}
+		msgTx.NonceValue = nonce
 	}
 
 	msgTx.From = address
@@ -101,8 +106,13 @@ func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
 	}
 
 	mar, _ := json.Marshal(msgTxWithSign)
-	txpool.RecvTx(mar)
+	err = txpool.RecvTx(mar)
+	if err != nil {
+		retMsg := FormatInvokeResResult("0001", err.Error(), common.Hash{})
+		encoder.Encode(retMsg)
+	} else {
+		retMsg := FormatInvokeResResult("0000", "", msgTx.Txid)
+		encoder.Encode(retMsg)
+	}
 
-	retMsg := FormatInvokeResResult("0000", "", msgTx.Txid)
-	encoder.Encode(retMsg)
 }
