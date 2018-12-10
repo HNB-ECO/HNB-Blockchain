@@ -1,65 +1,63 @@
 package cli
 
-
 import (
-	"os"
-	"github.com/urfave/cli"
-	"fmt"
-	"HNB/config"
-	"HNB/logging"
-	"HNB/p2pNetwork"
-	"time"
 	"HNB/access/rest"
-	"HNB/ledger"
-	tp "HNB/txpool"
 	"HNB/appMgr"
+	"HNB/config"
 	"HNB/consensus"
 	"HNB/db"
+	"HNB/ledger"
+	"HNB/logging"
 	"HNB/msp"
+	"HNB/p2pNetwork"
+	"HNB/sync"
+	tp "HNB/txpool"
+	"fmt"
+	"github.com/urfave/cli"
+	"os"
+	"time"
 )
 
 var (
 	CliLogPath = cli.StringFlag{
-		Name: "logPath",
+		Name:  "logPath",
 		Value: "./",
-		Usage: "log path",
+		Usage: "Storage path of this node log",
 	}
 	CliLogLevel = cli.StringFlag{
-		Name: "logLevel",
+		Name:  "logLevel",
 		Value: "info",
-		Usage: "log level(info/debug/error/warning)",
+		Usage: "The log levels supported by hnb include: info, debug, error, warning",
 	}
 	CliConfigPath = cli.StringFlag{
-		Name: "configPath",
+		Name:  "configPath",
 		Value: "./peer.json",
-		Usage: "config path",
+		Usage: "The initialization of hnb is inseparable from the configuration file, the path of the configuration file",
 	}
 	CliConfigEnabledCons = cli.StringFlag{
-		Name: "enabledCons",
+		Name:  "enabledCons",
 		Value: "true",
-		Usage: "enabled",
+		Usage: "Node has consensus function",
 	}
 	CliKeypairPath = cli.StringFlag{
-		Name: "keypairPath",
+		Name:  "keypairPath",
 		Value: "./node.key",
-		Usage: "keypair path",
+		Usage: "The hnb node identity requires a private key to guarantee the key storage path.",
 	}
 )
 
-
-func Init(){
+func Init() {
 	app := cli.NewApp()
 	app.Action = Start
-	app.Name = "111"
-	app.ArgsUsage = "222"
-	app.Description = "333"
+	app.Name = "hnb client"
+	app.ArgsUsage = "These parameters are the main functions supported by hnb, and we will continue to enrich and improve according to the subsequent requirements."
+	app.Description = "HNB system is designed to enable the founding of sustainable economic model to serve real business entities. The goal is to use HNB system to build a next generation of blockchain-based decentralized economic entity serving an economic ecosystem comprised of over 100 million of consumers and merchants. The HNB economy of scale and its members are ever-increasing as the ecosystem grows."
 	app.Version = "1.0.0"
-	app.Author = "HGS Developer"
-	app.HelpName = "444"
-	app.UsageText = "555"
-	app.Usage = "666"
+	app.Author = "Hnb users, developers, operators, and people interested in hnb"
+	app.HelpName = "If you have any questions, please join WIKI or ask questions in the community."
+	app.UsageText = "If you have any questions, please join WIKI or ask questions in the community."
 
-	app.Flags = []cli.Flag {
+	app.Flags = []cli.Flag{
 		CliLogPath,
 		CliConfigPath,
 		CliLogLevel,
@@ -75,81 +73,71 @@ func Init(){
 		ReadBlkC,
 		ReadBlkNumC,
 		ReadTxCount,
+		ReadTxMsg,
 	}
 
 	app.Run(os.Args)
 }
 
-func Start(ctx *cli.Context){
+func Start(ctx *cli.Context) {
 	configFile := ctx.GlobalString(CliConfigPath.Name)
 
 	config.LoadConfig(configFile)
 
-	if ctx.IsSet(CliLogPath.Name){
+	if ctx.IsSet(CliLogPath.Name) {
 		logPath := ctx.GlobalString(CliLogPath.Name)
 		config.Config.Log.Path = logPath
 	}
 
-	if ctx.IsSet(CliLogLevel.Name){
+	if ctx.IsSet(CliLogLevel.Name) {
 		logLevel := ctx.GlobalString(CliLogLevel.Name)
 		config.Config.Log.Level = logLevel
 	}
 
-	if ctx.IsSet(CliConfigEnabledCons.Name){
+	if ctx.IsSet(CliConfigEnabledCons.Name) {
 		enabledCons := ctx.GlobalBool(CliConfigEnabledCons.Name)
 		config.Config.EnableConsensus = enabledCons
 	}
-
-
 
 	if ctx.IsSet(CliKeypairPath.Name) {
 		keyPairPath := ctx.GlobalString(CliKeypairPath.Name)
 		config.Config.KetPairPath = keyPairPath
 	}
 
-
 	fmt.Printf("logPath=%s logLevel=%s\n enableCons=%v\n keyPairPath=%v\n",
 		config.Config.Log.Path,
-			config.Config.Log.Level,
-				config.Config.EnableConsensus,
-					config.Config.KetPairPath)
-
-
+		config.Config.Log.Level,
+		config.Config.EnableConsensus,
+		config.Config.KetPairPath)
 
 	logging.InitLogModule()
 
-
 	err := msp.NewKeyPair().Init(config.Config.KetPairPath)
 	if err != nil {
-		panic("msp init err: "+err.Error())
+		panic("msp init err: " + err.Error())
 	}
 
 	db, err := db.InitDB("leveldb")
-	if err != nil{
+	if err != nil {
 		panic(err.Error())
 	}
 	ledger.InitLedger(db)
-	//如果为了效率的提升，可以直接访问，无须消息总线
-	//msgBus.InitMsgBus()
-	//
-	//msgBus.Subscribe("111", Add)
-	//a := 1
-	//b := 2
-	//msgBus.Publish("111",&a, &b)
 
 	appMgr.InitAppMgr(db)
 
 	err = p2pNetwork.NewServer().Start()
-	if err != nil{
+	if err != nil {
 		panic("network err: " + err.Error())
 	}
 
-	tp.NewTXPoolServer().InitTXPoolServer()
+	sync.NewSync().Start()
+
+	tp.NewTXPoolServer().Start()
 
 	consensus.NewConsensusServer("algorand", tp.HGS).Start()
 
 	rest.StartRESTServer()
-	for{
+	for {
 		time.Sleep(time.Hour)
 	}
 }
