@@ -25,6 +25,11 @@ var (
 		Value: "admin",
 		Usage: "Query account balance",
 	}
+	CliChainIDMsg = cli.StringFlag{
+		Name:  "chainid",
+		Value: "admin",
+		Usage: "chainid",
+	}
 )
 
 var netMsg = cli.Command{
@@ -34,6 +39,7 @@ var netMsg = cli.Command{
 	Flags: []cli.Flag{
 		CliSendMsg,
 		CliRest,
+		CliChainIDMsg,
 	},
 }
 
@@ -44,6 +50,7 @@ var QueryMsgC = cli.Command{
 	Flags: []cli.Flag{
 		CliQueryMsg,
 		CliRest,
+		CliChainIDMsg,
 	},
 }
 
@@ -64,8 +71,9 @@ func QueryMsg(ctx *cli.Context) {
 
 	msg := ctx.String(CliQueryMsg.Name)
 	fmt.Println("addr:" + msg)
+	chainID := ctx.String(CliChainIDMsg.Name)
 
-	url := "http://" + "127.0.0.1:" + port + "/querymsg/" + msg
+	url := "http://" + "127.0.0.1:" + port + "/querymsg/" + chainID + "/" + msg
 
 	if url != "" {
 		response, err := http.Get(url)
@@ -80,6 +88,7 @@ func QueryMsg(ctx *cli.Context) {
 		response.Body.Close()
 	}
 }
+
 func SendMsg(ctx *cli.Context) {
 	port := ctx.String(CliRest.Name)
 
@@ -132,4 +141,3 @@ func GetAddr(ctx *cli.Context) {
 	response.Body.Close()
 
 }
-
