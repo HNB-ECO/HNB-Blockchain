@@ -1,5 +1,13 @@
 package msgHandler
 
+import (
+	"HNB/p2pNetwork"
+	"bytes"
+	"fmt"
+	"sync"
+	"time"
+)
+
 const CHAINID = "hgs"
 
 var msgQueueSize = 1000
@@ -9,6 +17,52 @@ var (
 	ErrAddingVote               = errors.New("Error adding vote")
 	ErrVoteHeightMismatch       = errors.New("Error vote height mismatch")
 )
+type TDMMsgHandler struct {
+	cmn.BaseService
+	ID               []byte
+	digestAddr       cmn.HexBytes
+	PeerMsgQueue     chan *cmn.PeerMessage // 共识消息队列
+	InternalMsgQueue chan *cmn.PeerMessage //内部消息队列
+	EventMsgQueue    chan *cmn.PeerMessage //广播到其他节点的消息
+	SyncMsgQueue     chan *cmn.PeerMessage // 同步消息队列
+	ForkSearchMsgQueue chan *cmn.PeerMessage // 分叉点查询消息队列
+
+	TxsAvailable     chan uint64
+	timeoutTicker    TimeoutTicker
+	doPrevote        func(height uint64, round int32) uint64 //doProvote
+	blockExec        *state.BlockExecutor
+
+	mtx sync.Mutex
+	types.RoundState
+	LastCommitState  state.State //state for height-1
+	timeState        *TimeStatistic
+	done             chan struct{}
+	allRoutineExitWg sync.WaitGroup
+	writeBlock       func(blk *bsComm.Block) error
+	//readBlockHeight   func(chainID string) (uint64, error)
+	syncHandler       *SyncHandler
+	recvSyncChan      chan *psync.SyncNotify
+	syncTimer         *time.Timer              // 同步定时器
+	syncTimeout       time.Duration            // 同步超时时间
+	cacheSyncBlkCount map[string]*SyncBlkCount // 缓存同步任务要同步的块数，k-chainId; v-目标同步块数和已完成同步块数;
+	isSyncStatus      *cmn.MutexBool           // 是否同步
+	//IsProposalBroadcast bool
+	IsVoteBroadcast bool
+	heightReq       *HeightReq
+	heightReqOutBg  *HeightReqOutBg
+	checkFork           *CheckFork
+	forkSearchWorker    *ForkSearchWorker
+	IsContinueConsensus bool
+	JustStarted         bool
+
+	isProposerFunc          func(tdmMsgHander *TDMMsgHandler, height uint64, round int32) (bool, *types.Validator) //判断本轮是否为提案人
+	geneProposalBlkFunc     func(tdmMsgHander *TDMMsgHandler) (block *types.Block, blockParts *types.PartSet)      //生成提案块方法
+	validateProposalBlkFunc func(tdmMsgHander *TDMMsgHandler, block *types.Block) bool                             //验证块提案是否合法
+	consSucceedFuncChain    map[string]func(tdmMsgHander *TDMMsgHandler, block *types.Block) error                 //共识成功后执行方法链，k-方法实现业务简称，v-方法实现
+	statusUpdatedFuncChain  map[string]func(tdmMsgHander *TDMMsgHandler) error                                     //状态更新完之后执行方法链，k-方法实现业务简称，v-方法实现
+
+}
+
 
 func NewTDMMsgHandler(lastCommitState state.State) (*TDMMsgHandler, error) {
 	msgHandler := &TDMMsgHandler{
