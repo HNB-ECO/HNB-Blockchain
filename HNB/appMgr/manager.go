@@ -197,3 +197,6 @@ func (am *appManager) getHandler(chainID string) (appComm.ContractInf, error) {
 	return handler, nil
 }
 
+
+
+
