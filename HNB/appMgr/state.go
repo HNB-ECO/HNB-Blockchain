@@ -18,6 +18,14 @@ func GetContractApi(chainID string) *contractApi {
 	return &contractApi{sc: sc, chainID: chainID}
 }
 
+func (s *contractApi)GetSnapshot() map[string]*ssComm.StateItem{
+	return s.sc.GetChangeSet()
+}
+
+func (s *contractApi)SnapshotRestore(si map[string]*ssComm.StateItem){
+	s.sc.Restore(si)
+}
+
 func (s *contractApi) IsDelState(key []byte) bool {
 	v := s.sc.Get(s.chainID, key)
 	if v != nil && v.State == ssComm.Deleted {
@@ -36,7 +44,7 @@ func (s *contractApi) isDelState(chainID string, key []byte) bool {
 	return false
 }
 
-func (s *contractApi) GetOtherState(chainID string, key []byte) ([]byte, error) {
+func (s *contractApi) GetOtherState(chainID string, key []byte) ([]byte, error){
 	if s.isDelState(chainID, key) == true {
 		return nil, nil
 	}
@@ -48,9 +56,22 @@ func (s *contractApi) GetOtherState(chainID string, key []byte) ([]byte, error) 
 	return v.Value, nil
 }
 
-func (s *contractApi) PutOtherState(chainID string, key, value []byte) error {
+func (s *contractApi)PutOtherState(chainID string, key, value []byte) error{
+
 	s.sc.Put(chainID, key, value)
 	return nil
+}
+
+func (s *contractApi)Merge(src []*ssComm.StateItem) {
+	for _, v := range src{
+		state := v.State
+		switch state {
+		case ssComm.Changed:
+			s.PutOtherState(v.ChainID, v.Key, v.Value)
+		case ssComm.Deleted:
+			s.DelState(v.Key)
+		}
+	}
 }
 
 func (s *contractApi) GetAllState() []*ssComm.StateItem {
@@ -75,6 +96,7 @@ func (s *contractApi) GetState(key []byte) ([]byte, error) {
 }
 
 func (s *contractApi) DelState(key []byte) error {
+
 	s.sc.Delete(s.chainID, key)
 	return nil
 }
@@ -94,3 +116,4 @@ func (s *contractApi) SetFrom(address common.Address) {
 func (s *contractApi) GetFrom() common.Address {
 	return s.from
 }
+

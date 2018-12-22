@@ -11,11 +11,11 @@ import (
 	ssComm "HNB/ledger/stateStore/common"
 	"HNB/logging"
 	"HNB/msp"
-	"HNB/txpool"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"sync"
+	"HNB/txpool"
 )
 
 type appManager struct {
@@ -56,7 +56,7 @@ func InitAppMgr(db dbComm.KVStore) error {
 
 	for iter.Next() {
 		appMgrLog.Infof(LOGTABLE_APPMGR, "installed contract %v", string(iter.Key()))
-		if bytes.Compare(iter.Key(), []byte("contract#"+txpool.HGS)) == 0 {
+		if bytes.Compare(iter.Key(), []byte("contract#" + txpool.HGS)) == 0 {
 			hgsInstalled = true
 		}
 	}
@@ -73,7 +73,7 @@ func InitAppMgr(db dbComm.KVStore) error {
 		s := &ssComm.StateSet{}
 		s.SI = apiInf.GetAllState()
 		ledger.SetContractState(s)
-		db.Put([]byte("contract#"+txpool.HGS), []byte("active"))
+		db.Put([]byte("contract#" + txpool.HGS), []byte("active"))
 	}
 
 	am.setHandler(txpool.HGS, hgsHandler)
@@ -85,9 +85,10 @@ func InitAppMgr(db dbComm.KVStore) error {
 		appMgrLog.Info(LOGTABLE_APPMGR, "init hgs app")
 	}
 
-	hnbHandler, _ := hnb.GetContractHandler()
 
-	if hnbInstalled == false {
+	hnbHandler, _ := hnb.GetContractHandler()
+	
+	if hnbInstalled == false{
 		//安装智能合约
 		apiInf := GetContractApi(txpool.HNB)
 		err := hnb.InstallContract(apiInf)
@@ -97,20 +98,21 @@ func InitAppMgr(db dbComm.KVStore) error {
 		s := &ssComm.StateSet{}
 		s.SI = apiInf.GetAllState()
 		ledger.SetContractState(s)
-		db.Put([]byte("contract#"+txpool.HNB), []byte("active"))
+		db.Put([]byte("contract#" + txpool.HNB), []byte("active"))
 	}
 
 	am.setHandler(txpool.HNB, hnbHandler)
 	//智能合约启动初始化
 	err = initApp(txpool.HNB)
 	if err != nil {
-		appMgrLog.Info(LOGTABLE_APPMGR, "init hnb app err:"+err.Error())
+		appMgrLog.Info(LOGTABLE_APPMGR, "init hnb app err:" + err.Error())
 	} else {
 		appMgrLog.Info(LOGTABLE_APPMGR, "init hnb app")
 	}
 
 	return nil
 }
+
 
 //记录合约地址
 
@@ -129,6 +131,7 @@ func BlockProcess(blk *common.Block) error {
 
 	apiHandlers := make(map[string]*contractApi)
 	n := &nnComm.NonceSet{}
+	s := &ssComm.StateSet{}
 
 	for _, tx := range blk.Txs {
 		handler, err := am.getHandler(tx.Type)
@@ -137,7 +140,7 @@ func BlockProcess(blk *common.Block) error {
 		}
 
 		h, ok := apiHandlers[tx.Type]
-		if !ok {
+		if !ok{
 			h = GetContractApi(tx.Type)
 			apiHandlers[tx.Type] = h
 		}
@@ -145,28 +148,27 @@ func BlockProcess(blk *common.Block) error {
 		h.SetArgs(tx.Payload)
 		h.SetFrom(tx.FromAddress())
 
+		snapshot := h.GetSnapshot()
 		err = handler.Invoke(h)
 		if err != nil {
 			//TODO 添加事件通知
 			//return err
 			appMgrLog.Info(LOGTABLE_APPMGR, "hgs err:"+err.Error())
+			h.SnapshotRestore(snapshot)
 		}
 
 		ni := &nnComm.NonceItem{}
 		ni.Nonce = tx.Nonce() + 1
 		ni.Key = tx.FromAddress()
 		n.NI = append(n.NI, ni)
-
-	}
-
-	//在事务中更新块信息和状态信息
-	s := &ssComm.StateSet{}
-
-	for _, v := range apiHandlers {
-		s.SI = append(s.SI, v.GetAllState()...)
 	}
 
 	stateChange, _ := json.Marshal([]interface{}{s.SI, n.NI})
+
+	for _,v := range apiHandlers{
+		s.SI = append(s.SI, v.GetAllState()...)
+	}
+
 
 	blk.StateHash, _ = msp.Hash256(stateChange)
 
@@ -194,3 +196,7 @@ func (am *appManager) getHandler(chainID string) (appComm.ContractInf, error) {
 
 	return handler, nil
 }
+
+
+
+
