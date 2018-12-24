@@ -1,10 +1,10 @@
 package txpool
 
 import (
-	"HNB/common"
-	"HNB/logging"
-	"HNB/p2pNetwork"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
 	"github.com/pkg/errors"
 	//"HNB/p2pNetwork/message/reqMsg"
 	//"encoding/json"
@@ -34,41 +34,41 @@ func NewTXPoolServer() *TXPoolServer {
 	return s
 }
 
-func (tps *TXPoolServer) RecvTx(msg []byte, msgSender uint64) error{
+func (tps *TXPoolServer) RecvTx(msg []byte, msgSender uint64) error {
 	if msg == nil {
 		errStr := fmt.Sprintf("msg is nil")
 		TXPoolLog.Warning(LOGTABLE_TXPOOL, errStr)
 		return errors.New(errStr)
 	}
 
-	//tx := common.Transaction{}
-	//err := json.Unmarshal(msg, &tx)
-	//if err != nil {
-	//	TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
-	//	return err
-	//}
-	//
-	//if msgSender == 0{//local
-	//	m := reqMsg.NewTxMsg(msg)
-	//	p2pNetwork.Xmit(m, false)
-	//	tps.txpool.AddLocal(&tx)
-	//}else{
-	//	tps.txpool.AddRemote(&tx)
-	//}
-	//
-	//infoStr := fmt.Sprintf("recv tx  %v", tx)
-	//TXPoolLog.Debugf(LOGTABLE_TXPOOL, infoStr)
-
-	msgTx := &RecvTxStruct{}
-	if msgSender == 0{
-		msgTx.local = true
-	}else{
-		msgTx.local = false
+	tx := common.Transaction{}
+	err := json.Unmarshal(msg, &tx)
+	if err != nil {
+		TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
+		return err
 	}
-	TXPoolLog.Debugf(LOGTABLE_TXPOOL, "recv msg local:%v", msgTx.local)
 
-	msgTx.recvTx = msg
-	tps.txpool.recvTx <- msgTx
+	if msgSender == 0 { //local
+		m := reqMsg.NewTxMsg(msg)
+		p2pNetwork.Xmit(m, false)
+		tps.txpool.AddLocal(&tx)
+	} else {
+		tps.txpool.AddRemote(&tx)
+	}
+
+	infoStr := fmt.Sprintf("recv tx  %v", string(msg))
+	TXPoolLog.Debugf(LOGTABLE_TXPOOL, infoStr)
+
+	//msgTx := &RecvTxStruct{}
+	//if msgSender == 0{
+	//	msgTx.local = true
+	//}else{
+	//	msgTx.local = false
+	//}
+	//TXPoolLog.Debugf(LOGTABLE_TXPOOL, "recv msg local:%v", msgTx.local)
+	//
+	//msgTx.recvTx = msg
+	//tps.txpool.recvTx <- msgTx
 	return nil
 }
 
@@ -115,8 +115,6 @@ func (tps *TXPoolServer) GetPendingNonce(address common.Address) uint64 {
 	return tps.txpool.State().GetNonce(address)
 }
 
-
 func (tps *TXPoolServer) GetContent() (map[common.Address]common.Transactions, map[common.Address]common.Transactions) {
 	return tps.txpool.Content()
 }
-

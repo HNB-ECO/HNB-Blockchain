@@ -1,8 +1,8 @@
 package txpool
 
 import (
-	"HNB/common"
-	"HNB/ledger"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
 )
 
 type PendingCache struct {
