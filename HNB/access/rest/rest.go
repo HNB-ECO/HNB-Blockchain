@@ -32,7 +32,7 @@ func buildOpenchainRESTRouter() *web.Router {
 	router = web.New(s)
 	router.Middleware((*serverREST).SetResponseType)
 	router.Get("/getaddr", (*serverREST).GetAddr)
-	router.Get("/querymsg/:chainID/:addr", (*serverREST).QueryMsg)
+        router.Get("/querybalance/:chainID/:addr", (*serverREST).QueryBalanceMsg)
 	router.Post("/sendtxmsg", (*serverREST).SendTxMsg)
 	router.Get("/blockheight", (*serverREST).BlockHeight)
 	router.Get("/block/:blkNum", (*serverREST).Block)

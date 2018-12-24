@@ -12,24 +12,57 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sync"
+	"HNB/contract/hnb"
+	"HNB/contract/hgs"
 )
 
-func (*serverREST) QueryMsg(rw web.ResponseWriter, req *web.Request) {
+
+//type qryHnbTx struct {
+//	//1  balance   2  ....
+//	TxType     uint8  `json:"txType"`
+//	PayLoad    []byte `json:"payLoad"`
+//}
+
+func (*serverREST) QueryBalanceMsg(rw web.ResponseWriter, req *web.Request) {
 	rw.WriteHeader(http.StatusOK)
 	encoder := json.NewEncoder(rw)
 
 	addr := req.PathParams["addr"]
 	chainID := req.PathParams["chainID"]
 
-	msg, err := appMgr.Query(chainID, util.HexToByte(addr))
-	var retMsg interface{}
-	if err != nil {
-		retMsg = FormatQueryResResult("0001", err.Error(), string(msg))
-	} else {
-		retMsg = FormatQueryResResult("0000", "", string(msg))
-	}
+	if chainID == txpool.HGS{
+		qh := &hgs.QryHgsTx{}
+		qh.TxType = hnb.BALANCE
+		qh.PayLoad = util.HexToByte(addr)
+		qhm,_ := json.Marshal(qh)
 
-	encoder.Encode(retMsg)
+		var retMsg interface{}
+		msg, err := appMgr.Query(chainID, qhm)
+		if err != nil {
+			retMsg = FormatQueryResResult("0001", err.Error(), string(msg))
+		} else {
+			retMsg = FormatQueryResResult("0000", "", string(msg))
+		}
+		encoder.Encode(retMsg)
+	}else if chainID == txpool.HNB{
+		qh := &hnb.QryHnbTx{}
+		qh.TxType = hnb.BALANCE
+		qh.PayLoad = util.HexToByte(addr)
+		qhm,_ := json.Marshal(qh)
+
+		var retMsg interface{}
+		msg, err := appMgr.Query(chainID, qhm)
+		if err != nil {
+			retMsg = FormatQueryResResult("0001", err.Error(), string(msg))
+		} else {
+			retMsg = FormatQueryResResult("0000", "", string(msg))
+		}
+		encoder.Encode(retMsg)
+	}else{
+		retMsg := FormatQueryResResult("0001", "chainid invalid", nil)
+		encoder.Encode(retMsg)
+	}
+	return
 }
 
 type AccountLock struct {
@@ -71,7 +104,6 @@ func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
 	encoder := json.NewEncoder(rw)
 	reqBody, _ := ioutil.ReadAll(req.Body)
 	msgTx := common.Transaction{}
-
 	err := json.Unmarshal(reqBody, &msgTx)
 	if err != nil {
 		msg := fmt.Sprintf("reqBody err:%v", err.Error())
@@ -92,27 +124,26 @@ func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
 		msgTx.NonceValue = nonce
 	}
 
-	msgTx.From = address
+	//msgTx.From = address
+	//signer := msp.GetSigner()
+	//msgTx.Txid = signer.Hash(&msgTx)
+	//msgTxWithSign, err := msp.SignTx(&msgTx, signer)
+	//if err != nil {
+	//	msg := fmt.Sprintf("sign err:%v", err.Error())
+	//	retMsg := FormatQueryResResult("0001", msg, nil)
+	//	encoder.Encode(retMsg)
+	//	return
+	//}
 
-	signer := msp.GetSigner()
-	msgTx.Txid = signer.Hash(&msgTx)
-
-	msgTxWithSign, err := msp.SignTx(&msgTx, signer)
-	if err != nil {
-		msg := fmt.Sprintf("sign err:%v", err.Error())
-		retMsg := FormatQueryResResult("0001", msg, nil)
-		encoder.Encode(retMsg)
-		return
-	}
-
-	mar, _ := json.Marshal(msgTxWithSign)
+	mar, _ := json.Marshal(msgTx)
 	err = txpool.RecvTx(mar)
-	if err != nil {
+	if err != nil{
 		retMsg := FormatInvokeResResult("0001", err.Error(), common.Hash{})
 		encoder.Encode(retMsg)
-	} else {
+	}else{
 		retMsg := FormatInvokeResResult("0000", "", msgTx.Txid)
 		encoder.Encode(retMsg)
 	}
 
 }
+
