@@ -5,6 +5,7 @@ import (
 	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
 	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -215,4 +216,66 @@ func (pool *TxPool) loop() {
 			}
 		}
 	}
+}
+
+func (pool *TxPool) lockedReset() {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pool.reset(nil)
+}
+
+// reset retrieves the current state of the blockchain and ensures the content
+// of the transaction pool is valid with regard to the chain state.
+func (pool *TxPool) reset(reinject common.Transactions) {
+	// If we're reorging an old state, reinject all dropped transactions
+
+	if pool.pendingState == nil {
+		pool.pendingState = NewPendingNonce()
+	}
+
+	pool.addTxsLocked(reinject, false)
+
+	// validate the pool of pending transactions, this will remove
+	// any transactions that have been included in the block or
+	// have been invalidated because of another transaction (e.g.
+	// higher gas price)
+	pool.demoteUnexecutables()
+
+	// Update all accounts to the latest known pending nonce
+	for addr, list := range pool.pending {
+		txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
+		pool.pendingState.SetNonce(addr, txs[len(txs)-1].Nonce()+1)
+	}
+	// Check the queue and move transactions over to the pending if possible
+	// or remove those that have become invalid
+	pool.promoteExecutables(nil)
+}
+
+// Stop terminates the transaction pool.
+func (pool *TxPool) Stop() {
+
+	pool.wg.Wait()
+
+	if pool.journal != nil {
+		pool.journal.close()
+	}
+	TXPoolLog.Info(LOGTABLE_TXPOOL, "Transaction pool stopped")
+}
+
+// State returns the virtual managed state of the transaction pool.
+func (pool *TxPool) State() *PendingCache {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+
+	return pool.pendingState
+}
+
+// Stats retrieves the current pool stats, namely the number of pending and the
+// number of queued (non-executable) transactions.
+func (pool *TxPool) Stats() (int, int) {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+
+	return pool.stats()
 }
