@@ -37,6 +37,7 @@ type ConsensusConfig struct {
 	GeneBftGroup []*GenesisValidator `json:"geneBftGroup,omitempty"`
 	//初始化全部的验证者
 	GeneValidators []*GenesisValidator `json:"geneValidators,omitempty"`
+	EpochPeriod    int                 `json:"epochPeriod"`
 }
 
 type GenesisValidator struct {
@@ -54,20 +55,24 @@ type GenesisValidator struct {
 
 type AllConfig struct {
 	Log                       LogConfig `json:"logConfig"`
-	SeedList                  []string `json:"seedList"`
-	MaxConnOutBound           uint     `json:"maxConnOutBound"`
-	MaxConnInBound            uint     `json:"maxConnInBound"`
-	EnableConsensus           bool     `json:"enableConsensus"`
-	MaxConnInBoundForSingleIP uint     `json:"singleIP"`
-	SyncPort                  uint16   `json:"syncPort"`
-	ConsPort                  uint16   `json:"consPort"`
-	RestPort                  uint16   `json:"restPort"`
-	GPRCPort                  uint16   `json:"grpcPort"`
-	IsPeersTLS                bool     `json:"isTLS"`
-	IsServerTLS               bool     `json:"isVisitTLS"`
-	TlsKeyPath                string   `json:"tlsKeyPath"`
-	TlsCertPath               string   `json:"tlsCertPath"`
-	DBPath                    string   `json:"dbPath"`
+	SeedList                  []string  `json:"seedList"`
+	MaxConnOutBound           uint      `json:"maxConnOutBound"`
+	MaxConnInBound            uint      `json:"maxConnInBound"`
+	EnableConsensus           bool      `json:"enableConsensus"`
+	MaxConnInBoundForSingleIP uint      `json:"singleIP"`
+	SyncPort                  uint16    `json:"syncPort"`
+	ConsPort                  uint16    `json:"consPort"`
+	RestPort                  uint16    `json:"restPort"`
+	GPRCPort                  uint16    `json:"grpcPort"`
+	IsPeersTLS                bool      `json:"isTLS"`
+	IsServerTLS               bool      `json:"isVisitTLS"`
+	TlsKeyPath                string    `json:"tlsKeyPath"`
+	TlsCertPath               string    `json:"tlsCertPath"`
+	IsBlkSQL                  bool      `json:"isBlkSQL"`
+	SQLIP                     string    `json:"sqlIP"`
+	UserName                  string    `json:"username"`
+	Password                  string    `json:"passwd"`
+	DBPath                    string    `json:"dbPath"`
 	//algorand config
 	KetPairPath     string `json:"ketPairPath"`
 	ConsensusConfig `json:"consConfig"`
