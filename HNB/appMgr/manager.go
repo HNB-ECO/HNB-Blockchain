@@ -11,11 +11,12 @@ import (
 	ssComm "HNB/ledger/stateStore/common"
 	"HNB/logging"
 	"HNB/msp"
+	"HNB/txpool"
 	"bytes"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"sync"
-	"HNB/txpool"
 )
 
 type appManager struct {
@@ -56,7 +57,7 @@ func InitAppMgr(db dbComm.KVStore) error {
 
 	for iter.Next() {
 		appMgrLog.Infof(LOGTABLE_APPMGR, "installed contract %v", string(iter.Key()))
-		if bytes.Compare(iter.Key(), []byte("contract#" + txpool.HGS)) == 0 {
+		if bytes.Compare(iter.Key(), []byte("contract#"+txpool.HGS)) == 0 {
 			hgsInstalled = true
 		}
 	}
@@ -73,7 +74,7 @@ func InitAppMgr(db dbComm.KVStore) error {
 		s := &ssComm.StateSet{}
 		s.SI = apiInf.GetAllState()
 		ledger.SetContractState(s)
-		db.Put([]byte("contract#" + txpool.HGS), []byte("active"))
+		db.Put([]byte("contract#"+txpool.HGS), []byte("active"))
 	}
 
 	am.setHandler(txpool.HGS, hgsHandler)
@@ -85,10 +86,9 @@ func InitAppMgr(db dbComm.KVStore) error {
 		appMgrLog.Info(LOGTABLE_APPMGR, "init hgs app")
 	}
 
-
 	hnbHandler, _ := hnb.GetContractHandler()
-	
-	if hnbInstalled == false{
+
+	if hnbInstalled == false {
 		//安装智能合约
 		apiInf := GetContractApi(txpool.HNB)
 		err := hnb.InstallContract(apiInf)
@@ -98,21 +98,20 @@ func InitAppMgr(db dbComm.KVStore) error {
 		s := &ssComm.StateSet{}
 		s.SI = apiInf.GetAllState()
 		ledger.SetContractState(s)
-		db.Put([]byte("contract#" + txpool.HNB), []byte("active"))
+		db.Put([]byte("contract#"+txpool.HNB), []byte("active"))
 	}
 
 	am.setHandler(txpool.HNB, hnbHandler)
 	//智能合约启动初始化
 	err = initApp(txpool.HNB)
 	if err != nil {
-		appMgrLog.Info(LOGTABLE_APPMGR, "init hnb app err:" + err.Error())
+		appMgrLog.Info(LOGTABLE_APPMGR, "init hnb app err:"+err.Error())
 	} else {
 		appMgrLog.Info(LOGTABLE_APPMGR, "init hnb app")
 	}
 
 	return nil
 }
-
 
 //记录合约地址
 
@@ -140,7 +139,7 @@ func BlockProcess(blk *common.Block) error {
 		}
 
 		h, ok := apiHandlers[tx.Type]
-		if !ok{
+		if !ok {
 			h = GetContractApi(tx.Type)
 			apiHandlers[tx.Type] = h
 		}
@@ -153,7 +152,7 @@ func BlockProcess(blk *common.Block) error {
 		if err != nil {
 			//TODO 添加事件通知
 			//return err
-			appMgrLog.Info(LOGTABLE_APPMGR, "hgs err:"+err.Error())
+			appMgrLog.Info(LOGTABLE_APPMGR, "hnb err:"+err.Error())
 			h.SnapshotRestore(snapshot)
 		}
 
@@ -165,14 +164,96 @@ func BlockProcess(blk *common.Block) error {
 
 	stateChange, _ := json.Marshal([]interface{}{s.SI, n.NI})
 
-	for _,v := range apiHandlers{
+	for _, v := range apiHandlers {
 		s.SI = append(s.SI, v.GetAllState()...)
 	}
-
 
 	blk.StateHash, _ = msp.Hash256(stateChange)
 
 	return ledger.WriteLedger(blk, s, n)
+}
+
+func UnfreezeToken(epochNo uint64) error {
+	handler, err := am.getHandler(txpool.HNB)
+	if err != nil {
+		return err
+	}
+
+	if handler == nil {
+		return errors.New("chainID not exist")
+	}
+
+	h := GetContractApi(txpool.HNB)
+	opochNoS := strconv.FormatUint(epochNo, 10)
+
+	hb := &hnb.HnbTx{}
+	hb.TxType = hnb.UNFREEZE_TOKEN
+	hb.PayLoad = []byte(opochNoS)
+
+	payload, _ := json.Marshal(hb)
+	h.SetArgs(payload)
+	ss := ssComm.StateSet{}
+	ss.SI = h.GetAllState()
+	err = ledger.SetContractState(&ss)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type QryHnbTx struct {
+	//1  balance   2  ....
+	TxType  uint8  `json:"txType"`
+	PayLoad []byte `json:"payLoad"`
+}
+
+func GetVoteSum(epochNo uint64) (int64, error) {
+	h, _ := am.getHandler(txpool.HNB)
+	apiInf := GetContractApi(txpool.HNB)
+	opochNoS := strconv.FormatUint(epochNo, 10)
+	qht := &QryHnbTx{}
+	qht.TxType = hnb.VOTESUM
+	qht.PayLoad = []byte(opochNoS)
+
+	q, _ := json.Marshal(qht)
+	apiInf.SetArgs(q)
+
+	r, err := h.Query(apiInf)
+	if err != nil {
+		return 0, err
+	}
+
+	s, err := strconv.ParseInt(string(r), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return s, nil
+}
+
+func GetVotePeerIDOrderToken(epochNo uint64) ([][]byte, error) {
+	h, _ := am.getHandler(txpool.HNB)
+	apiInf := GetContractApi(txpool.HNB)
+
+	opochNoS := strconv.FormatUint(epochNo, 10)
+	qht := &QryHnbTx{}
+	qht.TxType = hnb.TOKENORDER
+	qht.PayLoad = []byte(opochNoS)
+	q, _ := json.Marshal(qht)
+	apiInf.SetArgs(q)
+
+	r, err := h.Query(apiInf)
+	if err != nil {
+		return nil, err
+	}
+
+	pis := hnb.PeersIDSet{}
+	err = json.Unmarshal(r, &pis)
+	if err != nil {
+		return nil, err
+	}
+
+	return pis.PeerIDs, nil
 }
 
 func BlockRollBack(blkNum uint64) error {
@@ -196,7 +277,4 @@ func (am *appManager) getHandler(chainID string) (appComm.ContractInf, error) {
 
 	return handler, nil
 }
-
-
-
 
