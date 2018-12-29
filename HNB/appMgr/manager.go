@@ -192,6 +192,11 @@ func UnfreezeToken(epochNo uint64) error {
 
 	payload, _ := json.Marshal(hb)
 	h.SetArgs(payload)
+	err = handler.Invoke(h)
+	if err != nil {
+		return err
+	}
+
 	ss := ssComm.StateSet{}
 	ss.SI = h.GetAllState()
 	err = ledger.SetContractState(&ss)
