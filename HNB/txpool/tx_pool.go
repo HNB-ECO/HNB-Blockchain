@@ -1,11 +1,15 @@
 package txpool
 
 import (
+	"HNB/p2pNetwork/message/reqMsg"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
 	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 )
@@ -421,4 +425,593 @@ func (pool *TxPool) add(tx *common.Transaction, local bool) (bool, error) {
 
 	TXPoolLog.Infof(LOGTABLE_TXPOOL, "Pooled new future transaction", "hash", hash, "from", from)
 	return replace, nil
+}
+
+// Note, this method assumes the pool lock is held!
+func (pool *TxPool) enqueueTx(hash common.Hash, tx *common.Transaction) (bool, error) {
+	// Try to insert the transaction into the future queue
+	//from, _ := msp.Sender(pool.signer, tx) // already validate
+	from := tx.From
+	if pool.queue[from] == nil {
+		pool.queue[from] = newTxList(false)
+	}
+
+	TXPoolLog.Debugf(LOGTABLE_TXPOOL, "insert queue from:%v hash:%v", from, hash)
+
+	inserted, old := pool.queue[from].Add(tx)
+	if !inserted {
+		// An older transaction was better, discard this
+		return false, ErrReplaceUnderpriced
+	}
+	// Discard any previous transaction and mark this
+	if old != nil {
+		pool.all.Remove(old.Hash())
+	}
+	if pool.all.Get(hash) == nil {
+		pool.all.Add(tx)
+	}
+
+	return old != nil, nil
+}
+
+// journalTx adds the specified transaction to the local disk journal if it is
+// deemed to have been sent from a local account.
+func (pool *TxPool) journalTx(from common.Address, tx *common.Transaction) {
+	// Only journal if it's enabled and the transaction is local
+	if pool.journal == nil || !pool.locals.contains(from) {
+		return
+	}
+	if err := pool.journal.insert(tx); err != nil {
+		TXPoolLog.Warningf(LOGTABLE_TXPOOL, "Failed to journal local transaction", "err", err)
+	}
+}
+
+// promoteTx adds a transaction to the pending (processable) list of transactions
+// and returns whether it was inserted or an older was better.
+//
+// Note, this method assumes the pool lock is held!
+func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *common.Transaction) bool {
+	// Try to insert the transaction into the pending queue
+	if pool.pending[addr] == nil {
+		pool.pending[addr] = newTxList(true)
+	}
+	list := pool.pending[addr]
+
+	inserted, old := list.Add(tx)
+	if !inserted {
+		// An older transaction was better, discard this
+		pool.all.Remove(hash)
+		return false
+	}
+	// Otherwise discard any previous transaction and mark this
+	if old != nil {
+		pool.all.Remove(old.Hash())
+	}
+	// Failsafe to work around direct pending inserts (tests)
+	if pool.all.Get(hash) == nil {
+		pool.all.Add(tx)
+	}
+	// Set the potentially new pending nonce and notify any subsystems of the new tx
+	pool.beats[addr] = time.Now()
+	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
+
+	return true
+}
+
+// AddLocal enqueues a single transaction into the pool if it is valid, marking
+// the sender as a local one in the mean time, ensuring it goes around the local
+// pricing constraints.
+func (pool *TxPool) AddLocal(tx *common.Transaction) error {
+	return pool.addTx(tx, !pool.config.NoLocals)
+}
+
+// AddRemote enqueues a single transaction into the pool if it is valid. If the
+// sender is not among the locally tracked ones, full pricing constraints will
+// apply.
+func (pool *TxPool) AddRemote(tx *common.Transaction) error {
+	return pool.addTx(tx, false)
+}
+
+// AddLocals enqueues a batch of transactions into the pool if they are valid,
+// marking the senders as a local ones in the mean time, ensuring they go around
+// the local pricing constraints.
+func (pool *TxPool) AddLocals(txs []*common.Transaction) []error {
+	return pool.addTxs(txs, !pool.config.NoLocals)
+}
+
+// AddRemotes enqueues a batch of transactions into the pool if they are valid.
+// If the senders are not among the locally tracked ones, full pricing constraints
+// will apply.
+func (pool *TxPool) AddRemotes(txs []*common.Transaction) []error {
+	return pool.addTxs(txs, false)
+}
+
+// addTx enqueues a single transaction into the pool if it is valid.
+func (pool *TxPool) addTx(tx *common.Transaction, local bool) error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	// Try to inject the transaction and update any state
+	_, err := pool.add(tx, local)
+	if err != nil {
+		return err
+	}
+
+	pool.promoteExecutables([]common.Address{tx.FromAddress()})
+	return nil
+}
+
+// addTxs attempts to queue a batch of transactions if they are valid.
+func (pool *TxPool) addTxs(txs []*common.Transaction, local bool) []error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	return pool.addTxsLocked(txs, local)
+}
+
+// addTxsLocked attempts to queue a batch of transactions if they are valid,
+// whilst assuming the transaction pool lock is already held.
+func (pool *TxPool) addTxsLocked(txs []*common.Transaction, local bool) []error {
+	// Add the batch of transaction, tracking the accepted ones
+	dirty := make(map[common.Address]struct{})
+	errs := make([]error, len(txs))
+
+	for i, tx := range txs {
+		var replace bool
+		if replace, errs[i] = pool.add(tx, local); errs[i] == nil && !replace {
+			//from, _ := msp.Sender(pool.signer, tx) // already validated
+			from := tx.From
+			dirty[from] = struct{}{}
+		}
+	}
+	// Only reprocess the internal state if something was actually added
+	if len(dirty) > 0 {
+		addrs := make([]common.Address, 0, len(dirty))
+		for addr := range dirty {
+			addrs = append(addrs, addr)
+		}
+		pool.promoteExecutables(addrs)
+	}
+	return errs
+}
+
+// Status returns the status (unknown/pending/queued) of a batch of transactions
+// identified by their hashes.
+func (pool *TxPool) Status(hashes []common.Hash) []TxStatus {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+
+	status := make([]TxStatus, len(hashes))
+	for i, hash := range hashes {
+		if tx := pool.all.Get(hash); tx != nil {
+			//from, _ := msp.Sender(pool.signer, tx) // already validated
+			from := tx.From
+			if pool.pending[from] != nil && pool.pending[from].txs.items[tx.Nonce()] != nil {
+				status[i] = TxStatusPending
+			} else {
+				status[i] = TxStatusQueued
+			}
+		}
+	}
+	return status
+}
+
+// Get returns a transaction if it is contained in the pool
+// and nil otherwise.
+func (pool *TxPool) Get(hash common.Hash) *common.Transaction {
+	return pool.all.Get(hash)
+}
+
+// removeTx removes a single transaction from the queue, moving all subsequent
+// transactions back to the future queue.
+func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
+	// Fetch the transaction we wish to delete
+	tx := pool.all.Get(hash)
+	if tx == nil {
+		return
+	}
+	//addr, _ := msp.Sender(pool.signer, tx) // already validated during insertion
+	addr := tx.From
+	// Remove it from the list of known transactions
+	pool.all.Remove(hash)
+
+	// Remove the transaction from the pending lists and reset the account nonce
+	if pending := pool.pending[addr]; pending != nil {
+		if removed, invalids := pending.Remove(tx); removed {
+			// If no more pending transactions are left, remove the list
+			if pending.Empty() {
+				delete(pool.pending, addr)
+				delete(pool.beats, addr)
+			}
+			// Postpone any invalidated transactions
+			for _, tx := range invalids {
+				pool.enqueueTx(tx.Hash(), tx)
+			}
+			// Update the account nonce if needed
+			if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
+				pool.pendingState.SetNonce(addr, nonce)
+			}
+			return
+		}
+	}
+	// Transaction is in the future queue
+	if future := pool.queue[addr]; future != nil {
+		future.Remove(tx)
+		if future.Empty() {
+			delete(pool.queue, addr)
+		}
+	}
+}
+
+// promoteExecutables moves transactions that have become processable from the
+// future queue to the set of pending transactions. During this process, all
+// invalidated transactions (low nonce, low balance) are deleted.
+func (pool *TxPool) promoteExecutables(accounts []common.Address) {
+	// Track the promoted transactions to broadcast them at once
+	var promoted []*common.Transaction
+
+	// Gather all the accounts potentially needing updates
+	if accounts == nil {
+		accounts = make([]common.Address, 0, len(pool.queue))
+		for addr := range pool.queue {
+			accounts = append(accounts, addr)
+		}
+	}
+	// Iterate over all accounts and promote any executable transactions
+	for _, addr := range accounts {
+		list := pool.queue[addr]
+		if list == nil {
+			TXPoolLog.Debugf(LOGTABLE_TXPOOL, "accounts %v list = nil", addr)
+			continue // Just in case someone calls with a non existing account
+		}
+		// Drop all transactions that are deemed too old (low nonce)
+		nonce, _ := ledger.GetNonce(addr)
+		for _, tx := range list.Forward(nonce) {
+			hash := tx.Hash()
+			TXPoolLog.Debugf(LOGTABLE_TXPOOL, "Removed old queued transaction", "hash", hash)
+			pool.all.Remove(hash)
+		}
+		// Drop all transactions that are too costly (low balance or out of gas)
+		//drops, _ := list.Filter(pool.currentState.GetBalance(addr))
+		//for _, tx := range drops {
+		//	hash := tx.Hash()
+		//	TXPoolLog.Debugf(LOGTABLE_TXPOOL,"Removed unpayable queued transaction", "hash", hash)
+		//	pool.all.Remove(hash)
+		//}
+
+		TXPoolLog.Debugf(LOGTABLE_TXPOOL, "pending nonce:%v", pool.pendingState.GetNonce(addr))
+
+		// Gather all executable transactions and promote them
+		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
+			hash := tx.Hash()
+			TXPoolLog.Debugf(LOGTABLE_TXPOOL, "tx hash %v valid", hash)
+			if pool.promoteTx(addr, hash, tx) {
+				TXPoolLog.Debugf(LOGTABLE_TXPOOL, "Promoting queued transaction", "hash", hash)
+				promoted = append(promoted, tx)
+			}
+		}
+		// Drop all transactions over the allowed limit
+		if !pool.locals.contains(addr) {
+			for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
+				hash := tx.Hash()
+				pool.all.Remove(hash)
+				TXPoolLog.Debugf(LOGTABLE_TXPOOL, "Removed cap-exceeding queued transaction", "hash", hash)
+			}
+		}
+		// Delete the entire queue entry if it became empty.
+		if list.Empty() {
+			delete(pool.queue, addr)
+		}
+	}
+	// Notify subsystem for new promoted transactions.
+	//if len(promoted) > 0 {
+	//go pool.txFeed.Send(NewTxsEvent{promoted})
+	//}
+
+	pool.Notify()
+
+	// If the pending limit is overflown, start equalizing allowances
+	pending := uint64(0)
+	for _, list := range pool.pending {
+		pending += uint64(list.Len())
+	}
+	if pending > pool.config.GlobalSlots {
+		//pendingBeforeCap := pending
+		// Assemble a spam order to penalize large transactors first
+		spammers := prque.New(nil)
+		for addr, list := range pool.pending {
+			// Only evict transactions from high rollers
+			if !pool.locals.contains(addr) && uint64(list.Len()) > pool.config.AccountSlots {
+				spammers.Push(addr, int64(list.Len()))
+			}
+		}
+		// Gradually drop transactions from offenders
+		offenders := []common.Address{}
+		for pending > pool.config.GlobalSlots && !spammers.Empty() {
+			// Retrieve the next offender if not local address
+			offender, _ := spammers.Pop()
+			offenders = append(offenders, offender.(common.Address))
+
+			// Equalize balances until all the same or below threshold
+			if len(offenders) > 1 {
+				// Calculate the equalization threshold for all current offenders
+				threshold := pool.pending[offender.(common.Address)].Len()
+
+				// Iteratively reduce all offenders until below limit or threshold reached
+				for pending > pool.config.GlobalSlots && pool.pending[offenders[len(offenders)-2]].Len() > threshold {
+					for i := 0; i < len(offenders)-1; i++ {
+						list := pool.pending[offenders[i]]
+						for _, tx := range list.Cap(list.Len() - 1) {
+							// Drop the transaction from the global pools too
+							hash := tx.Hash()
+							pool.all.Remove(hash)
+
+							// Update the account nonce to the dropped transaction
+							if nonce := tx.Nonce(); pool.pendingState.GetNonce(offenders[i]) > nonce {
+								pool.pendingState.SetNonce(offenders[i], nonce)
+							}
+							TXPoolLog.Debugf(LOGTABLE_TXPOOL, "Removed fairness-exceeding pending transaction", "hash", hash)
+						}
+						pending--
+					}
+				}
+			}
+		}
+		// If still above threshold, reduce to limit or min allowance
+		if pending > pool.config.GlobalSlots && len(offenders) > 0 {
+			for pending > pool.config.GlobalSlots && uint64(pool.pending[offenders[len(offenders)-1]].Len()) > pool.config.AccountSlots {
+				for _, addr := range offenders {
+					list := pool.pending[addr]
+					for _, tx := range list.Cap(list.Len() - 1) {
+						// Drop the transaction from the global pools too
+						hash := tx.Hash()
+						pool.all.Remove(hash)
+
+						// Update the account nonce to the dropped transaction
+						if nonce := tx.Nonce(); pool.pendingState.GetNonce(addr) > nonce {
+							pool.pendingState.SetNonce(addr, nonce)
+						}
+						TXPoolLog.Debugf(LOGTABLE_TXPOOL, "Removed fairness-exceeding pending transaction", "hash", hash)
+					}
+					pending--
+				}
+			}
+		}
+	}
+	// If we've queued more transactions than the hard limit, drop oldest ones
+	queued := uint64(0)
+	for _, list := range pool.queue {
+		queued += uint64(list.Len())
+	}
+	if queued > pool.config.GlobalQueue {
+		// Sort all accounts with queued transactions by heartbeat
+		addresses := make(addressesByHeartbeat, 0, len(pool.queue))
+		for addr := range pool.queue {
+			if !pool.locals.contains(addr) { // don't drop locals
+				addresses = append(addresses, addressByHeartbeat{addr, pool.beats[addr]})
+			}
+		}
+		sort.Sort(addresses)
+
+		// Drop transactions until the total is below the limit or only locals remain
+		for drop := queued - pool.config.GlobalQueue; drop > 0 && len(addresses) > 0; {
+			addr := addresses[len(addresses)-1]
+			list := pool.queue[addr.address]
+
+			addresses = addresses[:len(addresses)-1]
+
+			// Drop all transactions if they are less than the overflow
+			if size := uint64(list.Len()); size <= drop {
+				for _, tx := range list.Flatten() {
+					pool.removeTx(tx.Hash(), true)
+				}
+				drop -= size
+				continue
+			}
+			// Otherwise drop only last few transactions
+			txs := list.Flatten()
+			for i := len(txs) - 1; i >= 0 && drop > 0; i-- {
+				pool.removeTx(txs[i].Hash(), true)
+				drop--
+			}
+		}
+	}
+}
+
+// demoteUnexecutables removes invalid and processed transactions from the pools
+// executable/pending queue and any subsequent transactions that become unexecutable
+// are moved back into the future queue.
+func (pool *TxPool) demoteUnexecutables() {
+	// Iterate over all accounts and demote any non-executable transactions
+	for addr, list := range pool.pending {
+
+		nonce, _ := ledger.GetNonce(addr)
+		TXPoolLog.Debugf(LOGTABLE_TXPOOL, "ledger nonce %v", nonce)
+		// Drop all transactions that are deemed too old (low nonce)
+		for _, tx := range list.Forward(nonce) {
+			hash := tx.Hash()
+			TXPoolLog.Debugf(LOGTABLE_TXPOOL, "Removed old pending transaction", "hash", hash)
+			pool.all.Remove(hash)
+		}
+
+		// If there's a gap in front, alert (should never happen) and postpone all transactions
+		if list.Len() > 0 && list.txs.Get(nonce) == nil {
+			for _, tx := range list.Cap(0) {
+				hash := tx.Hash()
+				TXPoolLog.Errorf(LOGTABLE_TXPOOL, "Demoting invalidated transaction", "hash", hash)
+				pool.enqueueTx(hash, tx)
+			}
+		}
+		// Delete the entire queue entry if it became empty.
+		if list.Empty() {
+			delete(pool.pending, addr)
+			delete(pool.beats, addr)
+		}
+	}
+}
+
+func (pool *TxPool) Notify() {
+	select {
+	case pool.notify <- struct{}{}:
+	default:
+	}
+}
+
+func (pool *TxPool) GetNotify() chan struct{} {
+	return pool.notify
+}
+
+func (pool *TxPool) handlerTx() {
+
+	for {
+		select {
+		case msgTx := <-pool.recvTx:
+			TXPoolLog.Infof("recv tx msg:%v", string(msgTx.recvTx))
+			tx := common.Transaction{}
+			err := json.Unmarshal(msgTx.recvTx, &tx)
+			if err != nil {
+				TXPoolLog.Warning(LOGTABLE_TXPOOL, err.Error())
+				return
+			}
+
+			if tx.Type == "" {
+				TXPoolLog.Infof(LOGTABLE_TXPOOL, "txid =%s chainID = nil", fmt.Sprintf("%x", tx.Txid))
+				continue
+			}
+			if msgTx.local == true {
+				m := reqMsg.NewTxMsg(msgTx.recvTx)
+				p2pNetwork.Xmit(m, false)
+
+				pool.AddLocal(&tx)
+			} else {
+				pool.AddRemote(&tx)
+			}
+
+			infoStr := fmt.Sprintf("recv tx  %v", tx)
+			TXPoolLog.Debugf(LOGTABLE_TXPOOL, infoStr)
+		}
+	}
+
+}
+
+// addressByHeartbeat is an account address tagged with its last activity timestamp.
+type addressByHeartbeat struct {
+	address   common.Address
+	heartbeat time.Time
+}
+
+type addressesByHeartbeat []addressByHeartbeat
+
+func (a addressesByHeartbeat) Len() int           { return len(a) }
+func (a addressesByHeartbeat) Less(i, j int) bool { return a[i].heartbeat.Before(a[j].heartbeat) }
+func (a addressesByHeartbeat) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
+// accountSet is simply a set of addresses to check for existence, and a signer
+// capable of deriving addresses from transactions.
+type accountSet struct {
+	accounts map[common.Address]struct{}
+	signer   msp.Signer
+	cache    *[]common.Address
+}
+
+// newAccountSet creates a new address set with an associated signer for sender
+// derivations.
+func newAccountSet(signer msp.Signer) *accountSet {
+	return &accountSet{
+		accounts: make(map[common.Address]struct{}),
+		signer:   signer,
+	}
+}
+
+// contains checks if a given address is contained within the set.
+func (as *accountSet) contains(addr common.Address) bool {
+	_, exist := as.accounts[addr]
+	return exist
+}
+
+// containsTx checks if the sender of a given tx is within the set. If the sender
+// cannot be derived, this method returns false.
+func (as *accountSet) containsTx(tx *common.Transaction) bool {
+	//if addr, err := msp.Sender(as.signer, tx); err == nil {
+	////	if addr, err := msp.Sender(as.signer, tx); err == nil {
+	//	return as.contains(addr)
+	//}
+	//return false
+	return as.contains(tx.From)
+
+}
+
+// add inserts a new address into the set to track.
+func (as *accountSet) add(addr common.Address) {
+	as.accounts[addr] = struct{}{}
+	as.cache = nil
+}
+
+// flatten returns the list of addresses within this set, also caching it for later
+// reuse. The returned slice should not be changed!
+func (as *accountSet) flatten() []common.Address {
+	if as.cache == nil {
+		accounts := make([]common.Address, 0, len(as.accounts))
+		for account := range as.accounts {
+			accounts = append(accounts, account)
+		}
+		as.cache = &accounts
+	}
+	return *as.cache
+}
+
+type txLookup struct {
+	all  map[common.Hash]*common.Transaction
+	lock sync.RWMutex
+}
+
+// newTxLookup returns a new txLookup structure.
+func newTxLookup() *txLookup {
+	return &txLookup{
+		all: make(map[common.Hash]*common.Transaction),
+	}
+}
+
+// Range calls f on each key and value present in the map.
+func (t *txLookup) Range(f func(hash common.Hash, tx *common.Transaction) bool) {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	for key, value := range t.all {
+		if !f(key, value) {
+			break
+		}
+	}
+}
+
+// Get returns a transaction if it exists in the lookup, or nil if not found.
+func (t *txLookup) Get(hash common.Hash) *common.Transaction {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return t.all[hash]
+}
+
+// Count returns the current number of items in the lookup.
+func (t *txLookup) Count() int {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return len(t.all)
+}
+
+// Add adds a transaction to the lookup.
+func (t *txLookup) Add(tx *common.Transaction) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	t.all[tx.Hash()] = tx
+}
+
+// Remove removes a transaction from the lookup.
+func (t *txLookup) Remove(hash common.Hash) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	delete(t.all, hash)
 }
