@@ -279,3 +279,146 @@ func (pool *TxPool) Stats() (int, int) {
 
 	return pool.stats()
 }
+
+// number of queued (non-executable) transactions.
+func (pool *TxPool) stats() (int, int) {
+	pending := 0
+	for _, list := range pool.pending {
+		pending += list.Len()
+	}
+	queued := 0
+	for _, list := range pool.queue {
+		queued += list.Len()
+	}
+	return pending, queued
+}
+
+// Content retrieves the data content of the transaction pool, returning all the
+// pending as well as queued transactions, grouped by account and sorted by nonce.
+func (pool *TxPool) Content() (map[common.Address]common.Transactions, map[common.Address]common.Transactions) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pending := make(map[common.Address]common.Transactions)
+	for addr, list := range pool.pending {
+		pending[addr] = list.Flatten()
+	}
+	queued := make(map[common.Address]common.Transactions)
+	for addr, list := range pool.queue {
+		queued[addr] = list.Flatten()
+	}
+	return pending, queued
+}
+
+// Pending retrieves all currently processable transactions, grouped by origin
+// account and sorted by nonce. The returned transaction set is a copy and can be
+// freely modified by calling code.
+func (pool *TxPool) Pending() (map[common.Address]common.Transactions, error) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pending := make(map[common.Address]common.Transactions)
+	for addr, list := range pool.pending {
+		pending[addr] = list.Flatten()
+	}
+	return pending, nil
+}
+
+// Locals retrieves the accounts currently considered local by the pool.
+func (pool *TxPool) Locals() []common.Address {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	return pool.locals.flatten()
+}
+
+// local retrieves all currently known local transactions, grouped by origin
+// account and sorted by nonce. The returned transaction set is a copy and can be
+// freely modified by calling code.
+func (pool *TxPool) local() map[common.Address]common.Transactions {
+	txs := make(map[common.Address]common.Transactions)
+	for addr := range pool.locals.accounts {
+		if pending := pool.pending[addr]; pending != nil {
+			txs[addr] = append(txs[addr], pending.Flatten()...)
+		}
+		if queued := pool.queue[addr]; queued != nil {
+			txs[addr] = append(txs[addr], queued.Flatten()...)
+		}
+	}
+	return txs
+}
+
+// validateTx checks whether a transaction is valid according to the consensus
+// rules and adheres to some heuristic limits of the local node (price and size).
+func (pool *TxPool) validateTx(tx *common.Transaction, local bool) error {
+	//TODO 对交易大小限制
+
+	// Make sure the transaction is signed properly
+	//from, err := msp.Sender(pool.signer, tx)
+	from := tx.From
+	//if err != nil {
+	//	TXPoolLog.Errorf(LOGTABLE_TXPOOL, "invalid sender err:%v", err.Error())
+	//	return ErrInvalidSender
+	//}
+	// Drop non-local transactions under our own minimal accepted gas price
+	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
+	//如果 交易地址不是本地的，需要计算以下gas是否满足最低要求
+	//如果 交易地址是本地的 不需要计算gas是否满足最低要求都要打包
+
+	// Ensure the transaction adheres to nonce ordering
+	nonce, _ := ledger.GetNonce(from)
+
+	if nonce > tx.Nonce() {
+		return ErrNonceTooLow
+	}
+
+	return nil
+}
+
+// add validates a transaction and inserts it into the non-executable queue for
+// later pending promotion and execution. If the transaction is a replacement for
+// an already pending or queued one, it overwrites the previous and returns this
+// so outer code doesn't uselessly call promote.
+//
+// If a newly added transaction is marked as local, its sending account will be
+// whitelisted, preventing any associated transaction from being dropped out of
+// the pool due to pricing constraints.F
+func (pool *TxPool) add(tx *common.Transaction, local bool) (bool, error) {
+	// If the transaction is already known, discard it
+	hash := tx.Hash()
+	if pool.all.Get(hash) != nil {
+		TXPoolLog.Debugf(LOGTABLE_TXPOOL, "Discarding already known transaction", "hash", hash)
+		return false, fmt.Errorf("known transaction: %x", hash)
+	}
+	// If the transaction fails basic validation, discard it
+	if err := pool.validateTx(tx, local); err != nil {
+		TXPoolLog.Errorf(LOGTABLE_TXPOOL, "Discarding invalid transaction hash:%v err:%v",
+			util.ByteToHex(hash.GetBytes()), err.Error())
+		return false, err
+	}
+	// If the transaction pool is full, discard underpriced transactions
+	if uint64(pool.all.Count()) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
+		return false, ErrTxQueueFull
+	}
+	// If the transaction is replacing an already pending one, do directly
+	from := tx.FromAddress()
+	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
+		return false, nil
+	}
+	// New transaction isn't replacing a pending one, push into queue
+	replace, err := pool.enqueueTx(hash, tx)
+	if err != nil {
+		return false, err
+	}
+	// Mark local addresses and journal local transactions
+	if local {
+		if !pool.locals.contains(from) {
+			TXPoolLog.Infof(LOGTABLE_TXPOOL, "Setting new local account", "address", from)
+			pool.locals.add(from)
+		}
+	}
+	pool.journalTx(from, tx)
+
+	TXPoolLog.Infof(LOGTABLE_TXPOOL, "Pooled new future transaction", "hash", hash, "from", from)
+	return replace, nil
+}
