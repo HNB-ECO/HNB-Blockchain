@@ -1,16 +1,16 @@
 package sync
 
 import (
-	"HNB/ledger"
-	pbLedger "HNB/ledger/blockStore/common"
-	"HNB/p2pNetwork"
-	netCommon "HNB/p2pNetwork/common"
-	mt "HNB/p2pNetwork/message/bean"
-	"HNB/p2pNetwork/message/reqMsg"
-	syncComm "HNB/sync/common"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	pbLedger "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
+	netCommon "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	mt "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
+	syncComm "github.com/HNB-ECO/HNB-Blockchain/HNB/sync/common"
 	"math/rand"
 	"time"
 )
