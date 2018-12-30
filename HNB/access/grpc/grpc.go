@@ -1,17 +1,16 @@
 package grpc
 
 import (
+	"HNB/access/grpc/proto"
 	"HNB/config"
 	"HNB/logging"
-	"google.golang.org/grpc"
-	"HNB/access/grpc/proto"
-	"net"
-	"fmt"
 	"crypto/tls"
-	"google.golang.org/grpc/credentials"
+	"fmt"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"net"
 )
-
 
 var GRPCLog logging.LogModule
 
@@ -19,7 +18,7 @@ const (
 	LOGTABLE_GRPC string = "grpc"
 )
 
-func GetTLSServerConfig(keyPath string,certPath string) ([]grpc.ServerOption, error) {
+func GetTLSServerConfig(keyPath string, certPath string) ([]grpc.ServerOption, error) {
 	GRPCLog.Infof(LOGTABLE_GRPC, "keyPath:%s, certPath:%s", keyPath, certPath)
 	cert, err := tls.LoadX509KeyPair(certPath,
 		keyPath)
@@ -28,21 +27,20 @@ func GetTLSServerConfig(keyPath string,certPath string) ([]grpc.ServerOption, er
 		return nil, err
 	}
 
-
 	cf := &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.NoClientCert,}
+		ClientAuth:   tls.NoClientCert}
 	creds := credentials.NewTLS(cf)
 
 	opts := []grpc.ServerOption{grpc.Creds(creds)}
 	return opts, nil
 }
 
-func StartGRPCServer(){
+func StartGRPCServer() {
 	//port := strconv.FormatUint(uint64(config.Config.GPRCPort), 10)
 
 	GRPCLog = logging.GetLogIns()
-	GRPCLog.Infof(LOGTABLE_GRPC, "grpc start port:%s " ,config.Config.GPRCPort)
+	GRPCLog.Infof(LOGTABLE_GRPC, "grpc start port:%v", config.Config.GPRCPort)
 
 	var opts []grpc.ServerOption
 	opts = append(opts, grpc.MaxMsgSize(200*1024*1024))
@@ -51,7 +49,7 @@ func StartGRPCServer(){
 		panic(err)
 	}
 
-	if config.Config.IsServerTLS == true{
+	if config.Config.IsServerTLS == true {
 		opts, err = GetTLSServerConfig(config.Config.TlsKeyPath, config.Config.TlsCertPath)
 		if err != nil {
 			panic(err)
@@ -61,19 +59,18 @@ func StartGRPCServer(){
 	grpcServer := grpc.NewServer(opts...)
 
 	proto.RegisterMsgGRPCServer(grpcServer, &serverHandle{})
-	go func(){
+	go func() {
 		err = grpcServer.Serve(lis)
-		if err != nil{
+		if err != nil {
 			panic(err)
 		}
 	}()
 }
 
 type serverHandle struct {
-
 }
 
-func (s *serverHandle)Chat(ctx context.Context, mr *proto.MsgReq) (*proto.MsgRes, error){
+func (s *serverHandle) Chat(ctx context.Context, mr *proto.MsgReq) (*proto.MsgRes, error) {
 	//开始处理msg信息
 	fmt.Printf("recv msg:%v\n", mr.Msg)
 

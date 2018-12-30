@@ -3,6 +3,8 @@ package rest
 import (
 	"HNB/appMgr"
 	"HNB/common"
+	"HNB/contract/hgs"
+	"HNB/contract/hnb"
 	"HNB/msp"
 	"HNB/txpool"
 	"HNB/util"
@@ -12,10 +14,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sync"
-	"HNB/contract/hnb"
-	"HNB/contract/hgs"
 )
-
 
 //type qryHnbTx struct {
 //	//1  balance   2  ....
@@ -30,11 +29,11 @@ func (*serverREST) QueryBalanceMsg(rw web.ResponseWriter, req *web.Request) {
 	addr := req.PathParams["addr"]
 	chainID := req.PathParams["chainID"]
 
-	if chainID == txpool.HGS{
+	if chainID == txpool.HGS {
 		qh := &hgs.QryHgsTx{}
 		qh.TxType = hnb.BALANCE
 		qh.PayLoad = util.HexToByte(addr)
-		qhm,_ := json.Marshal(qh)
+		qhm, _ := json.Marshal(qh)
 
 		var retMsg interface{}
 		msg, err := appMgr.Query(chainID, qhm)
@@ -44,11 +43,11 @@ func (*serverREST) QueryBalanceMsg(rw web.ResponseWriter, req *web.Request) {
 			retMsg = FormatQueryResResult("0000", "", string(msg))
 		}
 		encoder.Encode(retMsg)
-	}else if chainID == txpool.HNB{
+	} else if chainID == txpool.HNB {
 		qh := &hnb.QryHnbTx{}
 		qh.TxType = hnb.BALANCE
 		qh.PayLoad = util.HexToByte(addr)
-		qhm,_ := json.Marshal(qh)
+		qhm, _ := json.Marshal(qh)
 
 		var retMsg interface{}
 		msg, err := appMgr.Query(chainID, qhm)
@@ -58,7 +57,7 @@ func (*serverREST) QueryBalanceMsg(rw web.ResponseWriter, req *web.Request) {
 			retMsg = FormatQueryResResult("0000", "", string(msg))
 		}
 		encoder.Encode(retMsg)
-	}else{
+	} else {
 		retMsg := FormatQueryResResult("0001", "chainid invalid", nil)
 		encoder.Encode(retMsg)
 	}
@@ -137,10 +136,10 @@ func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
 
 	mar, _ := json.Marshal(msgTx)
 	err = txpool.RecvTx(mar)
-	if err != nil{
+	if err != nil {
 		retMsg := FormatInvokeResResult("0001", err.Error(), common.Hash{})
 		encoder.Encode(retMsg)
-	}else{
+	} else {
 		retMsg := FormatInvokeResResult("0000", "", msgTx.Txid)
 		encoder.Encode(retMsg)
 	}
