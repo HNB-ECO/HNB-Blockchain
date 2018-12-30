@@ -1,7 +1,7 @@
 package syncInterface
 
 import (
-	syncComm "HNB/sync/common"
+	syncComm "github.com/HNB-ECO/HNB-Blockchain/HNB/sync/common"
 )
 
 type SyncServiceInf interface {
