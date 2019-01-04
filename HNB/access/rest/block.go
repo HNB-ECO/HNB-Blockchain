@@ -7,6 +7,7 @@ import (
 	"github.com/gocraft/web"
 	"net/http"
 	"strconv"
+	"HNB/util"
 )
 
 func (*serverREST) BlockHeight(rw web.ResponseWriter, req *web.Request) {
@@ -34,8 +35,8 @@ func (*serverREST) Block(rw web.ResponseWriter, req *web.Request) {
 
 	blkInfo, _ := ledger.GetBlock(blkInt)
 
-	m, _ := json.Marshal(blkInfo)
-	retMsg := FormatQueryResResult("0000", "", string(m))
+	//m, _ := json.Marshal(blkInfo)
+	retMsg := FormatQueryResResult("0000", "", blkInfo)
 	encoder.Encode(retMsg)
 }
 
@@ -44,7 +45,7 @@ func (*serverREST) TxHash(rw web.ResponseWriter, req *web.Request) {
 	encoder := json.NewEncoder(rw)
 	txHash := req.PathParams["txHash"]
 
-	info, err := ledger.FindHashIndex(txHash)
+	info, err := ledger.FindHashIndex(util.HexToByte(txHash))
 	if err != nil {
 		msg := fmt.Sprintf("txHash %s", err.Error())
 		retMsg := FormatQueryResResult("0001", msg, nil)
@@ -67,7 +68,8 @@ func (*serverREST) TxHash(rw web.ResponseWriter, req *web.Request) {
 		return
 	}
 
-	m, _ := json.Marshal(tx)
-	retMsg := FormatQueryResResult("0000", "", string(m))
+	//m, _ := json.Marshal(tx)
+	retMsg := FormatQueryResResult("0000", "", tx)
 	encoder.Encode(retMsg)
 }
+
