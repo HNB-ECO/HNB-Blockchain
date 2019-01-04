@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sync"
+	"strconv"
 )
 
 //type qryHnbTx struct {
@@ -40,7 +41,13 @@ func (*serverREST) QueryBalanceMsg(rw web.ResponseWriter, req *web.Request) {
 		if err != nil {
 			retMsg = FormatQueryResResult("0001", err.Error(), string(msg))
 		} else {
-			retMsg = FormatQueryResResult("0000", "", string(msg))
+			if msg == nil{
+				retMsg = FormatQueryResResult("0000", "", 0)
+			}else{
+
+				bal,_ := strconv.ParseInt(string(msg), 10, 64)
+				retMsg = FormatQueryResResult("0000", "", bal)
+			}
 		}
 		encoder.Encode(retMsg)
 	} else if chainID == txpool.HNB {
@@ -54,8 +61,15 @@ func (*serverREST) QueryBalanceMsg(rw web.ResponseWriter, req *web.Request) {
 		if err != nil {
 			retMsg = FormatQueryResResult("0001", err.Error(), string(msg))
 		} else {
-			retMsg = FormatQueryResResult("0000", "", string(msg))
+			if msg == nil{
+				retMsg = FormatQueryResResult("0000", "", 0)
+			}else{
+
+				bal,_ := strconv.ParseInt(string(msg), 10, 64)
+				retMsg = FormatQueryResResult("0000", "", bal)
+			}
 		}
+
 		encoder.Encode(retMsg)
 	} else {
 		retMsg := FormatQueryResResult("0001", "chainid invalid", nil)
@@ -111,6 +125,7 @@ func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
 		return
 	}
 
+	msgTx.Txid = common.Hash{}
 	address := msp.AccountPubkeyToAddress()
 	if msgTx.NonceValue == 0 {
 		AccLockMgr.Lock(address)
@@ -133,7 +148,8 @@ func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
 	//	encoder.Encode(retMsg)
 	//	return
 	//}
-
+	signer := msp.GetSigner()
+	msgTx.Txid = signer.Hash(&msgTx)
 	mar, _ := json.Marshal(msgTx)
 	err = txpool.RecvTx(mar)
 	if err != nil {
