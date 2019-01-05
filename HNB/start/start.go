@@ -1,10 +1,9 @@
 package main
 
 import (
-	"HNB/cli"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli"
 )
 
-
-func main(){
+func main() {
 	cli.Init()
 }
