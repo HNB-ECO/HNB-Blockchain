@@ -1,9 +1,9 @@
 package p2pNetwork
 
 import (
-	"HNB/p2pNetwork/common"
-	"HNB/p2pNetwork/message/bean"
-	"HNB/p2pNetwork/peer"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/peer"
 )
 
 //p2pNetwork提供对外服务, 根据需求后续添加
@@ -47,4 +47,3 @@ func RegisterSyncNotify(nf common.NotifyFunc) {
 func RegisterConsNotify(nf common.NotifyFunc) {
 	P2PIns.msgRouter.RegisterConsNotify(nf)
 }
-
