@@ -3,6 +3,16 @@ package p2pNetwork
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	msgtypes "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/utils"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/peer"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/server"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -10,20 +20,11 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"HNB/p2pNetwork/server"
-	"HNB/p2pNetwork/common"
-	"HNB/p2pNetwork/message/reqMsg"
-	msgtypes "HNB/p2pNetwork/message/bean"
-	"HNB/p2pNetwork/message/utils"
-	"HNB/p2pNetwork/peer"
-	"HNB/config"
-	"HNB/util"
-	"HNB/logging"
-	"fmt"
 )
 
 var P2PLog logging.LogModule
-const(
+
+const (
 	LOGTABLE_NETWORK string = "network"
 )
 
@@ -35,7 +36,6 @@ type PPNetServer struct {
 	quitSyncRecent chan bool
 	quitOnline     chan bool
 	quitHeartBeat  chan bool
-
 }
 
 type ReconnectAddrs struct {
@@ -77,7 +77,6 @@ func (pps *PPNetServer) RegisterSyncNotify() uint32 {
 func (pps *PPNetServer) RegisterConsNotify() uint32 {
 	return pps.network.GetConnectionCnt()
 }
-
 
 func (pps *PPNetServer) GetConnectionCnt() uint32 {
 	return pps.network.GetConnectionCnt()
@@ -166,31 +165,40 @@ func (pps *PPNetServer) WaitForPeersStart() {
 	//}
 }
 
+//链接发现种子
 func (pps *PPNetServer) connectSeeds() {
 	seedNodes := make([]string, 0)
 	pList := make([]*peer.Peer, 0)
+
 	for _, n := range config.Config.SeedList {
+		//获取IP地址
 		ip, err := common.ParseIPAddr(n)
 		if err != nil {
-			//log.Warnf("seed peer %s address format is wrong", n)
+			P2PLog.Warningf(LOGTABLE_NETWORK, "seed peer %s address format is wrong", n)
 			continue
 		}
+
+		//host 主机与ip映射
 		ns, err := net.LookupHost(ip)
 		if err != nil {
-			//log.Warnf("resolve err: %s", err.Error())
+			P2PLog.Warningf(LOGTABLE_NETWORK, "resolve err: %s", err.Error())
 			continue
 		}
+
+		//获取端口号
 		port, err := common.ParseIPPort(n)
 		if err != nil {
-			//log.Warnf("seed peer %s address format is wrong", n)
+			P2PLog.Warningf(LOGTABLE_NETWORK, "seed peer %s address format is wrong", n)
 			continue
 		}
+
 		seedNodes = append(seedNodes, ns[0]+port)
 	}
 
 	for _, nodeAddr := range seedNodes {
 		var ip net.IP
 		np := pps.network.GetNp()
+		P2PLog.Infof(LOGTABLE_NETWORK, "process seedNode %v", nodeAddr)
 		np.Lock()
 		for _, tn := range np.List {
 			ipAddr, _ := tn.GetAddr16()
@@ -203,6 +211,7 @@ func (pps *PPNetServer) connectSeeds() {
 		}
 		np.Unlock()
 	}
+
 	if len(pList) > 0 {
 		rand.Seed(time.Now().UnixNano())
 		index := rand.Intn(len(pList))
@@ -244,7 +253,7 @@ func (pps *PPNetServer) retryInactivePeer() {
 
 	connCount := uint(pps.network.GetOutConnRecordLen())
 	if connCount >= config.Config.MaxConnOutBound {
-		//log.Warnf("Connect: out connections(%d) reach the max limit(%d)", connCount,
+		//log.Warnf("P2PLog.Warningf(LOGTABLE_NETWORK,: out connections(%d) reach the max limit(%d)", connCount,
 		//	config.DefConfig.P2PNode.MaxConnOutBound)
 		return
 	}
@@ -280,9 +289,9 @@ func (pps *PPNetServer) retryInactivePeer() {
 		pps.ReconnectAddrs.Unlock()
 		for _, addr := range addrs {
 			rand.Seed(time.Now().UnixNano())
-			//log.Info("Try to reconnect peer, peer addr is ", addr)
+			P2PLog.Infof(LOGTABLE_NETWORK, "Try to reconnect peer, peer addr is ", addr)
 			<-time.After(time.Duration(rand.Intn(common.CONN_MAX_BACK)) * time.Millisecond)
-			//log.Info("Back off time`s up, start connect node")
+			P2PLog.Infof(LOGTABLE_NETWORK, "Back off time`s up, start connect node")
 			pps.network.Connect(addr, false)
 		}
 
@@ -410,7 +419,7 @@ func (pps *PPNetServer) tryRecentPeers() {
 			return
 		}
 		if len(pps.recentPeers) > 0 {
-			//log.Info("try to connect recent peer")
+			P2PLog.Infof(LOGTABLE_NETWORK, "try to connect recent peer")
 		}
 		for _, v := range pps.recentPeers {
 			msg := fmt.Sprintf("try to connect recent peer %s", v)
