@@ -1,11 +1,10 @@
-
 package peer
 
 import (
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
 	"sync"
-	"HNB/p2pNetwork/common"
-	"HNB/p2pNetwork/message/bean"
 )
 
 type NbrPeers struct {
@@ -19,8 +18,8 @@ func (np *NbrPeers) Broadcast(msg bean.Message, isConsensus bool) {
 	for _, node := range np.List {
 		if node.syncState == common.ESTABLISH && node.GetRelay() == true {
 			err := node.Send(msg, isConsensus)
-			if err != nil{
-				P2PLog.Info(LOGTABLE_NETWORK, "send msg err: " + err.Error())
+			if err != nil {
+				P2PLog.Info(LOGTABLE_NETWORK, "send msg err: "+err.Error())
 			}
 		}
 	}

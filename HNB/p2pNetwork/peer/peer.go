@@ -1,23 +1,22 @@
-
 package peer
 
 import (
+	conn "HNB/p2pNetwork/receive"
 	"errors"
+	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
 	"net"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
-	"HNB/p2pNetwork/common"
-	conn "HNB/p2pNetwork/receive"
-	"HNB/p2pNetwork/message/bean"
-	"HNB/logging"
-	"fmt"
 )
 
-
 var P2PLog logging.LogModule
-const(
+
+const (
 	LOGTABLE_NETWORK string = "network"
 )
 
@@ -263,7 +262,7 @@ func (pc *Peer) AttachConsChan(msgchan chan *bean.MsgPayload) {
 func (pc *Peer) Send(msg bean.Message, isConsensus bool) error {
 
 	sp := fmt.Sprintf("send msg %v,cons:%v", msg.CmdType(), isConsensus)
-	P2PLog.Info(LOGTABLE_NETWORK, sp)
+	P2PLog.Debug(LOGTABLE_NETWORK, sp)
 
 	if isConsensus && pc.ConsLink.Valid() {
 		return pc.SendToCons(msg)
