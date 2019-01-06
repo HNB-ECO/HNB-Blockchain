@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
 	"net"
 	"time"
-	"HNB/p2pNetwork/message/bean"
-	"HNB/p2pNetwork/common"
-	"HNB/logging"
 )
 
 type ConnInfo struct {
@@ -79,7 +79,7 @@ func (lk *ConnInfo) Rx() {
 	for {
 		msg, err := bean.ReadMessage(reader)
 		if err != nil {
-			logging.GetLogIns().Error("rx", "read connection err: " + err.Error())
+			logging.GetLogIns().Error("rx", "read connection err: "+err.Error())
 			break
 		}
 
@@ -134,8 +134,10 @@ func (lk *ConnInfo) Tx(msg bean.Message) error {
 	if nCount == 0 {
 		nCount = 1
 	}
+
 	conn.SetWriteDeadline(time.Now().Add(time.Duration(nCount*common.WRITE_DEADLINE) * time.Second))
 	_, err = conn.Write(payload)
+
 	if err != nil {
 		lk.disconnectNotify()
 		return err
