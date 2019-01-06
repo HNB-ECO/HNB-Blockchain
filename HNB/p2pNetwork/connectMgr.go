@@ -1,14 +1,14 @@
 package p2pNetwork
 
 import (
-	"HNB/config"
-	"HNB/p2pNetwork/common"
-	"HNB/p2pNetwork/message/bean"
-	"HNB/p2pNetwork/message/reqMsg"
-	"HNB/p2pNetwork/peer"
-	"HNB/p2pNetwork/server"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/peer"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/server"
 	"math/rand"
 	"net"
 	"strconv"
@@ -200,8 +200,7 @@ func (ns *NetSubServer) IsPeerEstablished(p *peer.Peer) bool {
 
 func (ns *NetSubServer) Connect(addr string, isConsensus bool) error {
 	if ns.IsAddrInOutConnRecord(addr) {
-		msg := fmt.Sprintf("addr:%s is out conn", addr)
-		P2PLog.Warning(LOGTABLE_NETWORK, msg)
+		P2PLog.Warningf(LOGTABLE_NETWORK, "addr:%s is out conn", addr)
 		return nil
 	}
 	if ns.IsOwnAddress(addr) {
@@ -214,9 +213,8 @@ func (ns *NetSubServer) Connect(addr string, isConsensus bool) error {
 	ns.connectLock.Lock()
 	connCount := uint(ns.GetOutConnRecordLen())
 	if connCount >= config.Config.MaxConnOutBound {
-		msg := fmt.Sprintf("Connect: out connections(%d) reach the max limit(%d)",
+		P2PLog.Warningf(LOGTABLE_NETWORK, "Connect: out connections(%d) reach the max limit(%d)",
 			connCount, config.Config.MaxConnOutBound)
-		P2PLog.Warning(LOGTABLE_NETWORK, msg)
 		ns.connectLock.Unlock()
 		return errors.New("connect: out connections reach the max limit")
 	}
@@ -225,6 +223,7 @@ func (ns *NetSubServer) Connect(addr string, isConsensus bool) error {
 	if ns.IsNbrPeerAddr(addr, isConsensus) {
 		return nil
 	}
+
 	ns.connectLock.Lock()
 	if added := ns.AddOutConnectingList(addr); added == false {
 		p := ns.GetPeerFromAddr(addr)
@@ -261,8 +260,8 @@ func (ns *NetSubServer) Connect(addr string, isConsensus bool) error {
 
 	addr = conn.RemoteAddr().String()
 
-	msg := fmt.Sprintf("peer %s connect with %s with %s",
-		conn.LocalAddr().String(), conn.RemoteAddr().String(),
+	msg := fmt.Sprintf("isConsensus:%v peer %s connect with %s with %s",
+		isConsensus, conn.LocalAddr().String(), conn.RemoteAddr().String(),
 		conn.RemoteAddr().Network())
 	P2PLog.Info(LOGTABLE_NETWORK, msg)
 
@@ -275,7 +274,6 @@ func (ns *NetSubServer) Connect(addr string, isConsensus bool) error {
 		remotePeer.AttachSyncChan(ns.SyncChan)
 		go remotePeer.SyncLink.Rx()
 		remotePeer.SetSyncState(common.HAND)
-
 	} else {
 		remotePeer = peer.NewPeer()
 		ns.AddPeerConsAddress(addr, remotePeer)
@@ -291,7 +289,7 @@ func (ns *NetSubServer) Connect(addr string, isConsensus bool) error {
 		if !isConsensus {
 			ns.RemoveFromOutConnRecord(addr)
 		}
-		//log.Error(err)
+		P2PLog.Error(LOGTABLE_NETWORK, err.Error())
 		return err
 	}
 	return nil
@@ -371,7 +369,7 @@ func (ns *NetSubServer) startSyncAccept(listener net.Listener) {
 			return
 		}
 		if !ns.AddrValid(conn.RemoteAddr().String()) {
-			//log.Warnf("remote %s not in reserved list, close it ", conn.RemoteAddr())
+			P2PLog.Warningf(LOGTABLE_NETWORK, "remote %s not in reserved list, close it ", conn.RemoteAddr())
 			conn.Close()
 			continue
 		}
@@ -746,7 +744,7 @@ func TLSDial(nodeAddr string) (net.Conn, error) {
 }
 
 func initNonTlsListen(port uint16) (net.Listener, error) {
-	listener, err := net.Listen("tcp", ":" + strconv.Itoa(int(port)))
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(int(port)))
 	if err != nil {
 		//	log.Error("Error listening\n", err.Error())
 		return nil, err
@@ -758,4 +756,3 @@ func initTlsListen(port uint16) (net.Listener, error) {
 	//todo
 	return nil, nil
 }
-
