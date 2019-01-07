@@ -6,7 +6,7 @@ import (
 	"hash"
 	"reflect"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 type MockBCCSP struct {
@@ -166,3 +166,4 @@ func (*KeyDerivOpts) Algorithm() string {
 func (o *KeyDerivOpts) Ephemeral() bool {
 	return o.EphemeralValue
 }
+
