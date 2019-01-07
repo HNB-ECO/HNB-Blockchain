@@ -1,6 +1,8 @@
 package common
 
-import "math/big"
+import (
+	"math/big"
+)
 
 const (
 	HGS = "hgs"
@@ -32,15 +34,15 @@ func (a *Address) GetBytes() []byte {
 }
 
 type Transaction struct {
-	Type       string  //交易类型
-	Payload    []byte  //具体交易的数据序列化后的
-	Txid       Hash    //交易的
-	From       Address //账户发送方
-	NonceValue uint64
+	Type       string   `json:"type"`//交易类型
+	Payload    []byte   `json:"payload"`//具体交易的数据序列化后的
+	Txid       Hash     `json:"txid"`//交易的
+	From       Address  `json:"from"`//账户发送方
+	NonceValue uint64   `json:"nonceValue"`
 
-	V *big.Int //`json:"v" gencodec:"required"`
-	R *big.Int //`json:"r" gencodec:"required"`
-	S *big.Int //`json:"s" gencodec:"required"`
+	V *big.Int `json:"v"`//`json:"v" gencodec:"required"`
+	R *big.Int `json:"r"`//`json:"r" gencodec:"required"`
+	S *big.Int `json:"s"`//`json:"s" gencodec:"required"`
 
 }
 
