@@ -168,7 +168,7 @@ func BlockProcess(blk *common.Block) error {
 		s.SI = append(s.SI, v.GetAllState()...)
 	}
 
-	blk.StateHash, _ = msp.Hash256(stateChange)
+	blk.Header.StateHash, _ = msp.Hash256(stateChange)
 
 	return ledger.WriteLedger(blk, s, n)
 }
