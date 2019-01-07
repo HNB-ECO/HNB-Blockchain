@@ -22,7 +22,7 @@ var (
 )
 
 //read height
-var ReadBlkC = cli.Command{
+var ReadBlkHeight = cli.Command{
 	Name:   "blockheight",
 	Usage:  "Hnb supports querying the current block height, block height = highest block number +1",
 	Action: ReadHeight,
@@ -52,7 +52,7 @@ func ReadHeight(ctx *cli.Context) error {
 	return nil
 }
 
-var ReadBlkNumC = cli.Command{
+var ReadBlkByNum = cli.Command{
 	Name:   "block",
 	Usage:  "Hnb supports querying intra-block transaction data based on block number",
 	Action: ReadBlkNum,
@@ -84,7 +84,7 @@ func ReadBlkNum(ctx *cli.Context) error {
 	return nil
 }
 
-var ReadTxMsg = cli.Command{
+var ReadTxByHash = cli.Command{
 	Name:   "qryTxHash",
 	Usage:  "Hnb supports trading data based on query hashes based on transactions",
 	Action: QueryTxHash,

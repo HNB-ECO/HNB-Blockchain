@@ -1,6 +1,7 @@
 package cli
 
 import (
+	myrpc "HNB/access/grpc"
 	"HNB/access/rest"
 	"HNB/appMgr"
 	"HNB/config"
@@ -66,14 +67,15 @@ func Init() {
 	}
 
 	app.Commands = []cli.Command{
-		netC,
-		SendMsgC,
-		QueryMsgC,
-		NodeKeypairCommand,
-		ReadBlkC,
-		ReadBlkNumC,
-		ReadTxCount,
-		ReadTxMsg,
+		GetNetworkAddr,
+		SendTx,
+		QueryMsgCommand,
+		KeypairCommand,
+		ReadBlkHeight,
+		ReadBlkByNum,
+		//ReadTxPoolLen,
+		ReadTxByHash,
+		SendVoteTx,
 	}
 
 	app.Run(os.Args)
@@ -117,13 +119,21 @@ func Start(ctx *cli.Context) {
 		panic("msp init err: " + err.Error())
 	}
 
-	db, err := db.InitDB("leveldb")
+	dbIns, err := db.InitKVDB("leveldb")
 	if err != nil {
 		panic(err.Error())
 	}
-	ledger.InitLedger(db)
 
-	appMgr.InitAppMgr(db)
+	if config.Config.IsBlkSQL == true {
+		blkDBIns, err := db.InitSQLDB()
+		if err != nil {
+			panic(err.Error())
+		}
+		ledger.InitLedger(dbIns, blkDBIns)
+	} else {
+		ledger.InitLedger(dbIns, dbIns)
+	}
+	appMgr.InitAppMgr(dbIns)
 
 	err = p2pNetwork.NewServer().Start()
 	if err != nil {
@@ -134,10 +144,20 @@ func Start(ctx *cli.Context) {
 
 	tp.NewTXPoolServer().Start()
 
-	consensus.NewConsensusServer("algorand", tp.HGS).Start()
+	//consensus.NewConsensusServer(consensus.ALGORAND, tp.HNB).Start()
+	consensus.NewConsensusServer(consensus.DPoS, tp.HNB).Start()
 
-	rest.StartRESTServer()
+	if config.Config.RestPort != uint16(0) {
+		rest.StartRESTServer()
+	}
+
+	if config.Config.GPRCPort != uint16(0) {
+		myrpc.StartGRPCServer()
+	}
+
+	//修改成等待信号结束
 	for {
 		time.Sleep(time.Hour)
 	}
 }
+

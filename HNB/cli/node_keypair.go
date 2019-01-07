@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	NodeKeypairCommand = cli.Command{
+	KeypairCommand = cli.Command{
 		Action:      cli.ShowSubcommandHelp,
 		Name:        "nodekeypair",
 		Usage:       "Manage nodekeypair",
