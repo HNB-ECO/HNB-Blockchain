@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	comm "HNB/p2pNetwork/common"
 	"errors"
+	comm "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
 )
 
 type Addr struct {
