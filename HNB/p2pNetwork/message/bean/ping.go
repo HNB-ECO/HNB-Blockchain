@@ -1,11 +1,10 @@
-
 package bean
 
 import (
 	"bytes"
-	"HNB/p2pNetwork/common"
 	"encoding/binary"
 	"errors"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
 )
 
 type Ping struct {
