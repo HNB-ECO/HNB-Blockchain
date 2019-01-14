@@ -1,7 +1,7 @@
 package bean
 
 import (
-	"HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
 )
 
 type ConsMsg struct {
