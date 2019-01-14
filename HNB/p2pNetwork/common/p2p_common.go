@@ -77,7 +77,7 @@ type PeerAddr struct {
 	Time          int64    //latest timestamp
 	Services      uint64   //service type
 	IpAddr        [16]byte //ip address
-	Port          uint16   //sync port
+	SyncPort      uint16   //sync port
 	ConsensusPort uint16   //consensus port
 	ID            uint64   //Unique ID
 }
@@ -105,7 +105,7 @@ type RemovePeerID struct {
 	ID uint64 // The peer id
 }
 
-type NotifyFunc func([]byte, uint64)
+type NotifyFunc func([]byte, uint64) error
 
 //type AppendHeaders struct {
 //	Headers []*types.Header // Headers to be added to the ledger
