@@ -1,13 +1,13 @@
 package utils
 
 import (
+	msgCommon "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	msgTypes "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/server"
 	"net"
 	"strconv"
 	"time"
-	"HNB/p2pNetwork/server"
-	msgCommon "HNB/p2pNetwork/common"
-	"HNB/p2pNetwork/message/reqMsg"
-	msgTypes "HNB/p2pNetwork/message/bean"
 )
 
 // AddrReqHandle handles the neighbor address request from peer
@@ -37,14 +37,14 @@ func VersionHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{
 
 	remotePeer := p2p.GetPeerFromAddr(data.Addr)
 	if remotePeer == nil {
-		//log.Warn("peer is not exist", data.Addr)
+		P2PLog.Warningf(LOGTABLE_NETWORK, "peer is not exist", data.Addr)
 		//peer not exist,just remove list and return
 		p2p.RemoveFromConnectingList(data.Addr)
 		return
 	}
 	addrIp, err := msgCommon.ParseIPAddr(data.Addr)
 	if err != nil {
-		//log.Warn(err)
+		P2PLog.Warning(LOGTABLE_NETWORK, err.Error())
 		return
 	}
 	nodeAddr := addrIp + ":" +
@@ -54,7 +54,7 @@ func VersionHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{
 		p := p2p.GetPeer(version.P.Nonce)
 
 		if p == nil {
-			//log.Warn("sync link is not exist", version.P.Nonce)
+			P2PLog.Warningf(LOGTABLE_NETWORK, "sync link is not exist", version.P.Nonce)
 			remotePeer.CloseCons()
 			remotePeer.CloseSync()
 			return
@@ -64,10 +64,9 @@ func VersionHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{
 			p.ConsLink.SetID(version.P.Nonce)
 			p.SetConsState(remotePeer.GetConsState())
 			remotePeer = p
-
 		}
 		if version.P.Nonce == p2p.GetID() {
-			//log.Warn("the node handshake with itself")
+			P2PLog.Warningf(LOGTABLE_NETWORK, "the node handshake with itself")
 			p2p.SetOwnAddress(nodeAddr)
 			p2p.RemoveFromInConnRecord(remotePeer.GetAddr())
 			p2p.RemoveFromOutConnRecord(remotePeer.GetAddr())
@@ -77,7 +76,7 @@ func VersionHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{
 
 		s := remotePeer.GetConsState()
 		if s != msgCommon.INIT && s != msgCommon.HAND {
-			//log.Warn("unknown status to received version", s)
+			P2PLog.Warningf(LOGTABLE_NETWORK, "unknown status to received version", s)
 			remotePeer.CloseCons()
 			return
 		}
@@ -100,14 +99,15 @@ func VersionHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{
 		}
 		err := p2p.Send(remotePeer, msg, true)
 		if err != nil {
-			//log.Error(err)
+			P2PLog.Error(LOGTABLE_NETWORK, err.Error())
 			return
 		}
 	} else {
 		if version.P.Nonce == p2p.GetID() {
 			p2p.RemoveFromInConnRecord(remotePeer.GetAddr())
 			p2p.RemoveFromOutConnRecord(remotePeer.GetAddr())
-			//log.Warn("the node handshake with itself")
+
+			P2PLog.Warningf(LOGTABLE_NETWORK, "the node handshake with itself")
 			p2p.SetOwnAddress(nodeAddr)
 			remotePeer.CloseSync()
 			return
@@ -115,7 +115,7 @@ func VersionHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{
 
 		s := remotePeer.GetSyncState()
 		if s != msgCommon.INIT && s != msgCommon.HAND {
-			//log.Warn("unknown status to received version", s)
+			P2PLog.Warningf(LOGTABLE_NETWORK, "unknown status to received version %v", s)
 			remotePeer.CloseSync()
 			return
 		}
@@ -125,27 +125,27 @@ func VersionHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{
 		if p != nil {
 			ipOld, err := msgCommon.ParseIPAddr(p.GetAddr())
 			if err != nil {
-				//log.Warn("exist peer %d ip format is wrong %s", version.P.Nonce, p.GetAddr())
+				P2PLog.Warningf(LOGTABLE_NETWORK, "exist peer %d ip format is wrong %s", version.P.Nonce, p.GetAddr())
 				return
 			}
 			ipNew, err := msgCommon.ParseIPAddr(data.Addr)
 			if err != nil {
 				remotePeer.CloseSync()
-				//log.Warn("connecting peer %d ip format is wrong %s, close", version.P.Nonce, data.Addr)
+				P2PLog.Warningf(LOGTABLE_NETWORK, "connecting peer %d ip format is wrong %s, close", version.P.Nonce, data.Addr)
 				return
 			}
 			if ipNew == ipOld {
 				//same id and same ip
 				n, ret := p2p.DelNbrNode(version.P.Nonce)
 				if ret == true {
-					//log.Infof("peer reconnect %d", version.P.Nonce)
+					P2PLog.Infof(LOGTABLE_NETWORK, "peer reconnect %d", version.P.Nonce)
 					// Close the connection and release the node source
 					n.CloseSync()
 					n.CloseCons()
 					//TODO jm
 				}
 			} else {
-				//log.Infof("same peer id from different addr: %s, %s close latest one", ipOld, ipNew)
+				P2PLog.Infof(LOGTABLE_NETWORK, "same peer id from different addr: %s, %s close latest one", ipOld, ipNew)
 				remotePeer.CloseSync()
 				return
 
@@ -177,7 +177,6 @@ func VersionHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{
 		var msg msgTypes.Message
 		if s == msgCommon.INIT {
 			remotePeer.SetSyncState(msgCommon.HAND_SHAKE)
-			//msg = reqMsg.NewVersion(p2p, false, ledger.DefLedger.GetCurrentBlockHeight())
 			msg = reqMsg.NewVersion(p2p, false, 0)
 		} else if s == msgCommon.HAND {
 			remotePeer.SetSyncState(msgCommon.HAND_SHAKED)
@@ -185,7 +184,7 @@ func VersionHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{
 		}
 		err := p2p.Send(remotePeer, msg, false)
 		if err != nil {
-			//log.Error(err)
+			P2PLog.Error(LOGTABLE_NETWORK, err.Error())
 			return
 		}
 	}
@@ -199,14 +198,14 @@ func VerAckHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}
 	remotePeer := p2p.GetPeer(data.Id)
 
 	if remotePeer == nil {
-		//log.Warn("nbr node is not exist", data.Id, data.Addr)
+		P2PLog.Warningf(LOGTABLE_NETWORK, "nbr node is not exist", data.Id, data.Addr)
 		return
 	}
 
 	if verAck.IsConsensus == true {
 		s := remotePeer.GetConsState()
 		if s != msgCommon.HAND_SHAKE && s != msgCommon.HAND_SHAKED {
-			//log.Warn("unknown status to received verAck", s)
+			P2PLog.Warningf(LOGTABLE_NETWORK, "unknown status to received verAck", s)
 			return
 		}
 
@@ -221,7 +220,7 @@ func VerAckHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}
 	} else {
 		s := remotePeer.GetSyncState()
 		if s != msgCommon.HAND_SHAKE && s != msgCommon.HAND_SHAKED {
-			//log.Warn("unknown status to received verAck", s)
+			P2PLog.Warningf(LOGTABLE_NETWORK, "unknown status to received verAck", s)
 			return
 		}
 
@@ -239,7 +238,7 @@ func VerAckHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}
 			if remotePeer.GetConsPort() > 0 {
 				addrIp, err := msgCommon.ParseIPAddr(addr)
 				if err != nil {
-					//log.Warn(err)
+					P2PLog.Warning(LOGTABLE_NETWORK, err.Error())
 					return
 				}
 				nodeConsensusAddr := addrIp + ":" +
@@ -262,7 +261,7 @@ func AddrHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) 
 	for _, v := range msg.NodeAddrs {
 		var ip net.IP
 		ip = v.IpAddr[:]
-		address := ip.To16().String() + ":" + strconv.Itoa(int(v.Port))
+		address := ip.To16().String() + ":" + strconv.Itoa(int(v.SyncPort))
 
 		if v.ID == p2p.GetID() {
 			continue
@@ -276,7 +275,7 @@ func AddrHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) 
 			continue
 		}
 
-		if v.Port == 0 {
+		if v.SyncPort == 0 {
 			continue
 		}
 		if p2p.IsAddrFromConnecting(address) {
@@ -315,7 +314,7 @@ func PingHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) 
 	ping := data.Payload.(*msgTypes.Ping)
 	remotePeer := p2p.GetPeer(data.Id)
 	if remotePeer == nil {
-//		log.Error("remotePeer invalid in PingHandle")
+		//		log.Error("remotePeer invalid in PingHandle")
 		return
 	}
 	remotePeer.SetHeight(ping.Height)
@@ -326,7 +325,7 @@ func PingHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) 
 
 	err := p2p.Send(remotePeer, msg, false)
 	if err != nil {
-//		log.Error(err)
+		//		log.Error(err)
 	}
 }
 
@@ -336,7 +335,7 @@ func PongHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) 
 
 	remotePeer := p2p.GetPeer(data.Id)
 	if remotePeer == nil {
-//		log.Error("remotePeer invalid in PongHandle")
+		//		log.Error("remotePeer invalid in PongHandle")
 		return
 	}
 	remotePeer.SetHeight(pong.Height)
@@ -349,20 +348,25 @@ func NetHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) {
 	P2PLog.Info(LOGTABLE_NETWORK, msg.Msg)
 }
 
-func (mr *MessageRouter)TxHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) {
+func (mr *MessageRouter) TxHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) {
 
 	msg := data.Payload.(*msgTypes.TxMsg)
-	mr.txFunc(msg.Msg)
+	if mr.txFunc != nil {
+		mr.txFunc(msg.Msg, data.Id)
+	}
 }
 
-func (mr *MessageRouter)SyncHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) {
+func (mr *MessageRouter) SyncHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) {
 	msg := data.Payload.(*msgTypes.SyncMsg)
-	mr.syncFunc(msg.Msg)
+	if mr.syncFunc != nil {
+		mr.syncFunc(msg.Msg, data.Id)
+	}
 }
 
-func (mr *MessageRouter)ConsHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) {
+func (mr *MessageRouter) ConsHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) {
 
 	msg := data.Payload.(*msgTypes.ConsMsg)
-	mr.consFunc(msg.Msg)
+	if mr.consFunc != nil {
+		mr.consFunc(msg.Msg, data.Id)
+	}
 }
-
