@@ -4,72 +4,80 @@ import (
 	"HNB/ledger"
 	"encoding/json"
 	"fmt"
-	"github.com/gocraft/web"
-	"net/http"
 	"strconv"
 	"HNB/util"
+	"bytes"
+	"github.com/pkg/errors"
 )
 
-func (*serverREST) BlockHeight(rw web.ResponseWriter, req *web.Request) {
-	rw.WriteHeader(http.StatusOK)
-	encoder := json.NewEncoder(rw)
+
+func HighestBlockNum(params json.RawMessage)  (interface{}, error){
+	//fmt.Printf("params:%v\n", string(params))
+
+	//dec := json.NewDecoder(bytes.NewReader(params))
+
+	//if tok, _ := dec.Token(); tok != json.Delim('[') {
+	//	return nil, errors.New("no [")
+	//}
+
 	height, _ := ledger.GetBlockHeight()
-	retMsg := FormatQueryResResult("0000", "", height)
-	encoder.Encode(retMsg)
+	return height - 1, nil
 }
 
-func (*serverREST) Block(rw web.ResponseWriter, req *web.Request) {
-	rw.WriteHeader(http.StatusOK)
-	encoder := json.NewEncoder(rw)
-	blkNum := req.PathParams["blkNum"]
-	height, _ := ledger.GetBlockHeight()
-	blkInt, _ := strconv.ParseUint(blkNum, 10, 64)
+func Block(params json.RawMessage)  (interface{}, error){
+	dec := json.NewDecoder(bytes.NewReader(params))
 
-	if blkInt+1 > height {
-		msg := fmt.Sprintf("height %s < blkNum %s",
+	if tok, _ := dec.Token(); tok != json.Delim('[') {
+		return nil, errors.New("no [")
+	}
+
+	if !dec.More(){
+		return nil, errors.New("data not complete")
+	}
+	var blkNum uint64
+	err := dec.Decode(&blkNum)
+	if err != nil{
+		return nil, err
+	}
+	height, _ := ledger.GetBlockHeight()
+
+	if blkNum+1 > height {
+		msg := fmt.Sprintf("height %s , blkNum %d",
 			strconv.FormatUint(height, 10), blkNum)
-		retMsg := FormatQueryResResult("0001", msg, nil)
-		encoder.Encode(retMsg)
-		return
+		return nil, errors.New(msg)
 	}
 
-	blkInfo, _ := ledger.GetBlock(blkInt)
-
-	//m, _ := json.Marshal(blkInfo)
-	retMsg := FormatQueryResResult("0000", "", blkInfo)
-	encoder.Encode(retMsg)
+	blkInfo, err := ledger.GetBlock(blkNum)
+	return blkInfo, nil
 }
 
-func (*serverREST) TxHash(rw web.ResponseWriter, req *web.Request) {
-	rw.WriteHeader(http.StatusOK)
-	encoder := json.NewEncoder(rw)
-	txHash := req.PathParams["txHash"]
+func TxHash(params json.RawMessage)  (interface{}, error){
+	dec := json.NewDecoder(bytes.NewReader(params))
 
-	info, err := ledger.FindHashIndex(util.HexToByte(txHash))
-	if err != nil {
-		msg := fmt.Sprintf("txHash %s", err.Error())
-		retMsg := FormatQueryResResult("0001", msg, nil)
-		encoder.Encode(retMsg)
-		return
+	if tok, _ := dec.Token(); tok != json.Delim('[') {
+		return nil, errors.New("no [")
 	}
 
-	if info == nil {
-		msg := fmt.Sprintf("txHash:%s not exist", txHash)
-		retMsg := FormatQueryResResult("0001", msg, nil)
-		encoder.Encode(retMsg)
-		return
+	if !dec.More(){
+		return nil, errors.New("data not complete")
+	}
+	var txHash string
+	err := dec.Decode(&txHash)
+	if err != nil{
+		return nil, err
+	}
+	info, err := ledger.FindHashIndex(util.HexToByte(txHash))
+	if err != nil{
+		return nil, err
+	}
+
+	if info == nil{
+		return nil, nil
 	}
 
 	tx, err := ledger.GetTransaction(info.BlockNum, info.Offset)
-	if err != nil {
-		msg := fmt.Sprintf("txHash %s", err.Error())
-		retMsg := FormatQueryResResult("0001", msg, nil)
-		encoder.Encode(retMsg)
-		return
+	if err != nil{
+		return nil, err
 	}
-
-	//m, _ := json.Marshal(tx)
-	retMsg := FormatQueryResResult("0000", "", tx)
-	encoder.Encode(retMsg)
+	return tx, nil
 }
-
