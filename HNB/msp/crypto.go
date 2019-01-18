@@ -1,13 +1,13 @@
 package msp
 
 import (
-	"HNB/bccsp"
-	"HNB/bccsp/factory"
-	"HNB/bccsp/secp256k1"
-	"HNB/bccsp/sw"
 	"bytes"
 	"crypto/elliptic"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/factory"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
 	"strconv"
 )
 
