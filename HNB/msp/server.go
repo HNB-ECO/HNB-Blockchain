@@ -1,15 +1,15 @@
 package msp
 
 import (
-	"HNB/bccsp"
-	"HNB/bccsp/sw"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
 
-	"HNB/bccsp/factory"
-	"HNB/bccsp/secp256k1"
 	"crypto/sha256"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/factory"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
 	"github.com/juju/errors"
 )
 
@@ -34,6 +34,7 @@ func StringToBccspKey(pubkey string) bccsp.Key {
 	switch keyType {
 	case ECDSAP256:
 		pkEcc := new(ecdsa.PublicKey)
+		pkEcc.Curve = secp256k1.S256()
 		pkEcc.X, pkEcc.Y = elliptic.Unmarshal(secp256k1.S256(), HexToByte(pubkey))
 		pk := sw.Ecdsa256K1PublicKey{pkEcc}
 		return &pk
@@ -80,6 +81,18 @@ func Sign(msg []byte) (signature []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	switch keyPair.Scheme {
+	case ECDSAP256:
+		return bccspInstance.Sign(keyPair.PriKey, digest, nil)
+
+	default:
+		return nil, fmt.Errorf("private key %v not supported", keyPair.Scheme)
+	}
+}
+
+func SignWithHash(digest []byte) (signature []byte, err error) {
+	bccspInstance := factory.GetDefault()
 
 	switch keyPair.Scheme {
 	case ECDSAP256:
