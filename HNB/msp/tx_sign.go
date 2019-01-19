@@ -1,18 +1,17 @@
 package msp
 
 import (
-	"HNB/bccsp"
-	"HNB/bccsp/secp256k1"
-	"HNB/bccsp/sha3"
-	"HNB/bccsp/sw"
-	"HNB/common"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sha3"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 	"math/big"
-	"strings"
 )
 
 var (
@@ -43,7 +42,7 @@ func GetSigner() Signer {
 	}
 
 	chainID := new(big.Int)
-	chainID.SetBytes([]byte(common.HGS))
+	chainID.SetBytes([]byte(common.HNB))
 	hnbSigner = NewHNBSigner(chainID)
 
 	return hnbSigner
@@ -51,8 +50,9 @@ func GetSigner() Signer {
 
 // SignTx signs the transaction using the given signer and private key
 func SignTx(tx *common.Transaction, s Signer) (*common.Transaction, error) {
-	txMarshal, _ := json.Marshal(tx)
-	sig, err := Sign(txMarshal)
+	//txMarshal, _ := json.Marshal(tx)
+	hash := s.Hash(tx)
+	sig, err := SignWithHash(hash.GetBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -118,9 +118,25 @@ func (s HNBSigner) Equal(s2 Signer) bool {
 
 var big8 = big.NewInt(8)
 
+func Protected(tx *common.Transaction) bool {
+	return isProtectedV(tx.V)
+}
+
+func isProtectedV(V *big.Int) bool {
+	if V.BitLen() <= 8 {
+		v := V.Uint64()
+		return v != 27 && v != 28
+	}
+	// anything not 27 or 28 is considered protected
+	return true
+}
+
 func (s HNBSigner) Sender(tx *common.Transaction) (common.Address, error) {
-	if strings.Compare(tx.Type, string(s.chainId.Bytes())) != 0 {
-		return common.Address{}, ErrInvalidChainId
+	//if strings.Compare(tx.ContractName, string(s.chainId.Bytes())) != 0 {
+	//	return common.Address{}, ErrInvalidChainId
+	//}
+	if !Protected(tx) {
+		return HomesteadSigner{}.Sender(tx)
 	}
 
 	V := new(big.Int).Sub(tx.V, s.chainIdMul)
@@ -152,7 +168,8 @@ func signHash(x interface{}) (h common.Hash) {
 // It does not uniquely identify the transaction.
 func (s HNBSigner) Hash(tx *common.Transaction) (h common.Hash) {
 	return signHash([]interface{}{
-		tx.Type,
+		tx.ContractName,
+		tx.From,
 		tx.Payload,
 		tx.NonceValue,
 	})
@@ -200,7 +217,8 @@ func (fs FrontierSigner) SignatureValues(tx *common.Transaction, sig []byte) (r,
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *common.Transaction) common.Hash {
 	return signHash([]interface{}{
-		tx.Type,
+		tx.ContractName,
+		tx.From,
 		tx.Payload,
 		tx.NonceValue,
 	})
@@ -288,4 +306,3 @@ func AccountPubkeyToAddress1(pubkey bccsp.Key) common.Address {
 
 	return BytesToAddress(Keccak256(pubBytes[1:])[12:])
 }
-
