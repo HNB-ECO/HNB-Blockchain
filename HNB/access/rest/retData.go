@@ -1,41 +1,41 @@
 package rest
 
-import (
-	"HNB/common"
-	"fmt"
-)
+import "encoding/json"
 
-type RetCode string
-type RetMsg string
 
-type RestInsertResult struct {
-	RestBase
-	Txid string `json:"txid,omitempty"`
+type JsonrpcMessage struct {
+	Version string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id,omitempty"`
+	Method  string          `json:"method,omitempty"`
+	Params  json.RawMessage `json:"params,omitempty"`
+	Error   *jsonError      `json:"error,omitempty"`
+	Result  json.RawMessage `json:"result,omitempty"`
 }
 
-type RestQueryResult struct {
-	RestBase
-	Data interface{} `json:"data,omitempty"`
+
+
+type jsonSuccessResponse struct {
+	Version string      `json:"jsonrpc"`
+	Id      interface{} `json:"id,omitempty"`
+	Result  interface{} `json:"result"`
 }
 
-type RestBase struct {
-	Code    RetCode     `json:"code,omitempty"`
-	Message interface{} `json:"msg,omitempty"`
+type jsonError struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
-func FormatInvokeResResult(code RetCode, message interface{}, txid common.Hash) *RestInsertResult {
-	res := &RestInsertResult{}
-	res.Code = code
-	res.Message = message
-	res.Txid = fmt.Sprintf("%x", txid)
-	return res
+type jsonErrResponse struct {
+	Version string      `json:"jsonrpc"`
+	Id      interface{} `json:"id,omitempty"`
+	Error   jsonError   `json:"error"`
 }
 
-func FormatQueryResResult(code RetCode, message interface{}, data interface{}) *RestQueryResult {
+func SuccessResponse(Version string, Id interface{}, Result interface{}) *jsonSuccessResponse{
+	return &jsonSuccessResponse{Version, Id, Result}
+}
 
-	res := &RestQueryResult{}
-	res.Code = code
-	res.Message = message
-	res.Data = data
-	return res
+func ErrorResponse(Version string, Id interface{}, Code int, Message string) *jsonErrResponse{
+	return &jsonErrResponse{Version, Id, jsonError{Code, Message, nil}}
 }

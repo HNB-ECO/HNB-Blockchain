@@ -4,8 +4,6 @@ import (
 	"HNB/txpool"
 	"HNB/util"
 	"encoding/json"
-	"github.com/gocraft/web"
-	"net/http"
 )
 
 type TxsInfo struct {
@@ -19,9 +17,7 @@ type TxInfo struct {
 	Txid  string `json:"txid"`
 }
 
-func (*serverREST) GetTxPoolQueue(rw web.ResponseWriter, req *web.Request) {
-	rw.WriteHeader(http.StatusOK)
-	encoder := json.NewEncoder(rw)
+func GetTxPoolQueue(params json.RawMessage)  (interface{}, error){
 	queue, pending := txpool.GetContent()
 	var queueInfo, pendingInfo []*TxInfo
 
@@ -46,7 +42,5 @@ func (*serverREST) GetTxPoolQueue(rw web.ResponseWriter, req *web.Request) {
 	}
 
 	tsi := &TxsInfo{queueInfo, pendingInfo}
-	retMsg := FormatQueryResResult("0000", "", tsi)
-	encoder.Encode(retMsg)
+	return tsi, nil
 }
-

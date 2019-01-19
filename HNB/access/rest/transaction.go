@@ -9,26 +9,35 @@ import (
 	"HNB/txpool"
 	"HNB/util"
 	"encoding/json"
-	"fmt"
-	"github.com/gocraft/web"
-	"io/ioutil"
-	"net/http"
 	"sync"
 	"strconv"
+	"bytes"
+	"errors"
+	"HNB/rlp"
 )
 
-//type qryHnbTx struct {
-//	//1  balance   2  ....
-//	TxType     uint8  `json:"txType"`
-//	PayLoad    []byte `json:"payLoad"`
-//}
+func QueryBalanceMsg(params json.RawMessage)  (interface{}, error){
+	dec := json.NewDecoder(bytes.NewReader(params))
+	if tok, _ := dec.Token(); tok != json.Delim('[') {
+		return nil, errors.New("no [")
+	}
 
-func (*serverREST) QueryBalanceMsg(rw web.ResponseWriter, req *web.Request) {
-	rw.WriteHeader(http.StatusOK)
-	encoder := json.NewEncoder(rw)
+	if !dec.More(){
+		return nil, errors.New("data not complete")
+	}
+	var chainID,addr string
+	err := dec.Decode(&chainID)
+	if err != nil{
+		return nil, err
+	}
+	if !dec.More(){
+		return nil, errors.New("data not complete")
+	}
+	err = dec.Decode(&addr)
+	if err != nil{
+		return nil, err
+	}
 
-	addr := req.PathParams["addr"]
-	chainID := req.PathParams["chainID"]
 
 	if chainID == txpool.HGS {
 		qh := &hgs.QryHgsTx{}
@@ -36,46 +45,40 @@ func (*serverREST) QueryBalanceMsg(rw web.ResponseWriter, req *web.Request) {
 		qh.PayLoad = util.HexToByte(addr)
 		qhm, _ := json.Marshal(qh)
 
-		var retMsg interface{}
 		msg, err := appMgr.Query(chainID, qhm)
 		if err != nil {
-			retMsg = FormatQueryResResult("0001", err.Error(), string(msg))
+			return nil, err
 		} else {
+			var bal int64
 			if msg == nil{
-				retMsg = FormatQueryResResult("0000", "", 0)
+				bal = 0
 			}else{
-
-				bal,_ := strconv.ParseInt(string(msg), 10, 64)
-				retMsg = FormatQueryResResult("0000", "", bal)
+				bal,_ = strconv.ParseInt(string(msg), 10, 64)
 			}
+			return bal, nil
 		}
-		encoder.Encode(retMsg)
 	} else if chainID == txpool.HNB {
 		qh := &hnb.QryHnbTx{}
 		qh.TxType = hnb.BALANCE
 		qh.PayLoad = util.HexToByte(addr)
 		qhm, _ := json.Marshal(qh)
 
-		var retMsg interface{}
 		msg, err := appMgr.Query(chainID, qhm)
 		if err != nil {
-			retMsg = FormatQueryResResult("0001", err.Error(), string(msg))
+			return nil, err
 		} else {
+			var bal int64
 			if msg == nil{
-				retMsg = FormatQueryResResult("0000", "", 0)
+				bal = 0
 			}else{
-
-				bal,_ := strconv.ParseInt(string(msg), 10, 64)
-				retMsg = FormatQueryResResult("0000", "", bal)
+				bal,_ = strconv.ParseInt(string(msg), 10, 64)
 			}
+			return bal, nil
 		}
-
-		encoder.Encode(retMsg)
 	} else {
-		retMsg := FormatQueryResResult("0001", "chainid invalid", nil)
-		encoder.Encode(retMsg)
+		return nil, errors.New("chainID not exist")
 	}
-	return
+	return nil, nil
 }
 
 type AccountLock struct {
@@ -112,31 +115,48 @@ func (alm *AccountLock) UnLock(address common.Address) {
 	lock.Unlock()
 }
 
-func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
-	rw.WriteHeader(http.StatusOK)
-	encoder := json.NewEncoder(rw)
-	reqBody, _ := ioutil.ReadAll(req.Body)
-	msgTx := common.Transaction{}
-	err := json.Unmarshal(reqBody, &msgTx)
-	if err != nil {
-		msg := fmt.Sprintf("reqBody err:%v", err.Error())
-		retMsg := FormatQueryResResult("0001", msg, nil)
-		encoder.Encode(retMsg)
-		return
+func SendTxMsg(params json.RawMessage)  (interface{}, error){
+	//from
+	//value1
+	//contractName
+	//to
+	//value2
+	//contractName
+
+	//nonceValue
+	//  V/R/S
+
+	dec := json.NewDecoder(bytes.NewReader(params))
+	if tok, _ := dec.Token(); tok != json.Delim('[') {
+		return nil, errors.New("no [")
+	}
+
+	if !dec.More(){
+		return nil, errors.New("data not complete")
+	}
+
+	var rawTransaction string
+	err := dec.Decode(&rawTransaction)
+	if err != nil{
+		return nil, err
+	}
+
+	msgTx := &common.Transaction{}
+	err = rlp.DecodeBytes(util.FromHex(rawTransaction), msgTx)
+	if err != nil{
+		return nil, err
 	}
 
 	msgTx.Txid = common.Hash{}
-	address := msp.AccountPubkeyToAddress()
-	if msgTx.NonceValue == 0 {
-		AccLockMgr.Lock(address)
-		defer AccLockMgr.UnLock(address)
 
-		nonce := txpool.GetPendingNonce(address)
-		//if nonce == 0{
-		//	nonce = 1
-		//}
-		msgTx.NonceValue = nonce
-	}
+	//address := msp.AccountPubkeyToAddress()
+	//if msgTx.NonceValue == 0 {
+	//	AccLockMgr.Lock(address)
+	//	defer AccLockMgr.UnLock(address)
+	//
+	//	nonce := txpool.GetPendingNonce(address)
+	//	msgTx.NonceValue = nonce
+	//}
 
 	//msgTx.From = address
 	//signer := msp.GetSigner()
@@ -149,16 +169,12 @@ func (*serverREST) SendTxMsg(rw web.ResponseWriter, req *web.Request) {
 	//	return
 	//}
 	signer := msp.GetSigner()
-	msgTx.Txid = signer.Hash(&msgTx)
+	msgTx.Txid = signer.Hash(msgTx)
 	mar, _ := json.Marshal(msgTx)
 	err = txpool.RecvTx(mar)
 	if err != nil {
-		retMsg := FormatInvokeResResult("0001", err.Error(), common.Hash{})
-		encoder.Encode(retMsg)
-	} else {
-		retMsg := FormatInvokeResResult("0000", "", msgTx.Txid)
-		encoder.Encode(retMsg)
+		return nil, err
 	}
+	return util.ByteToHex(msgTx.Txid.GetBytes()), nil
 
 }
-
