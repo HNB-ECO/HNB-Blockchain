@@ -1,7 +1,22 @@
 package common
 
+import (
+	txComm "github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
+)
+
+type Header struct {
+	BlockNum     uint64        `json:"blockNum"`
+	PreviousHash util.HexBytes `json:"previousHash"`
+	CreateTime   uint64        `json:"createTime"`
+	SenderId     util.HexBytes `json:"senderId"`
+	ConsArgs     util.HexBytes `json:"consArgs"`
+	Ext          util.HexBytes `json:"ext"`
+	TxsHash      util.HexBytes `json:"txsHash"`
+	StateHash    util.HexBytes `json:"stateHash"`
+}
 
 type Block struct {
-	ChainID  string //合约ID
-	BlockNum uint64
+	Header *Header               `json:"header"`
+	Txs    []*txComm.Transaction `json:"txs"`
 }
