@@ -1,9 +1,9 @@
 package logging
 
 import (
-	"HNB/config"
-	"HNB/util"
 	"bufio"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"github.com/lestrrat/go-file-rotatelogs"
 	"github.com/rifflock/lfshook"
 	log "github.com/sirupsen/logrus"
@@ -23,7 +23,7 @@ func (li *logrusIns) Init() {
 	}
 	baseLogPaht := path.Join(config.Config.Log.Path, "log")
 	writer, err := rotatelogs.New(
-		baseLogPaht + ".%Y%m%d%H",
+		baseLogPaht+".%Y%m%d%H",
 		rotatelogs.WithLinkName(baseLogPaht), // 生成软链，指向最新日志文件
 		//rotatelogs.WithMaxAge(maxAge), // 文件最大保存时间
 		rotatelogs.WithRotationTime(time.Hour), // 日志切割时间间隔
@@ -105,4 +105,3 @@ func (li *logrusIns) Warningf(key, format string, args ...interface{}) {
 func (li *logrusIns) Errorf(key, format string, args ...interface{}) {
 	li.WithFields(log.Fields{"type": key}).Errorf(format, args...)
 }
-
