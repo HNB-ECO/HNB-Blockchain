@@ -1,33 +1,32 @@
 package msgBus
 
-import(
+import (
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	mbus "github.com/asaskevich/EventBus"
-	"HNB/logging"
 )
-
 
 var mBus mbus.Bus
 var myLog logging.LogModule
+
 const (
 	MSGBUS string = "msgBus"
 )
 
-func InitMsgBus(){
+func InitMsgBus() {
 	mBus = mbus.New()
 	myLog = logging.GetLogIns()
 }
 
 //要求订阅method的方法必须是两个参数
-func Subscribe(key string, method interface{}){
+func Subscribe(key string, method interface{}) {
 
-	myLog.Info(MSGBUS, "subscribe topic: " + key)
+	myLog.Info(MSGBUS, "subscribe topic: "+key)
 	err := mBus.Subscribe(key, method)
-	if err != nil{
+	if err != nil {
 		panic("msg bus subscribe err: " + err.Error())
 	}
 }
 
-func Publish(key string, args interface{}, result interface{}){
+func Publish(key string, args interface{}, result interface{}) {
 	mBus.Publish(key, args, result)
 }
-
