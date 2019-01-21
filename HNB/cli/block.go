@@ -5,6 +5,9 @@ import (
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"net/http"
+	"bytes"
+	"HNB/access/rest"
+	"encoding/json"
 )
 
 var (
@@ -34,10 +37,13 @@ var ReadBlkHeight = cli.Command{
 func ReadHeight(ctx *cli.Context) error {
 
 	port := ctx.String(CliRest.Name)
-	url := "http://" + "127.0.0.1:" + port + "/blockheight"
-
+	url := "http://" + "127.0.0.1:" + port + "/"
+	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm.Method = "blockNumber"
+	jm.ID,_ = json.Marshal(1)
+	jmm,_ := json.Marshal(jm)
 	if url != "" {
-		response, err := http.Get(url)
+		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
 
 		if err != nil {
 			fmt.Println(err)
@@ -62,14 +68,20 @@ var ReadBlkByNum = cli.Command{
 	},
 }
 
+
 func ReadBlkNum(ctx *cli.Context) error {
 
 	blkNum := ctx.String(CliBlkNum.Name)
 	port := ctx.String(CliRest.Name)
-	url := "http://" + "127.0.0.1:" + port + "/block/" + blkNum
-
+	url := "http://" + "127.0.0.1:" + port + "/"
+	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm.Method = "getBlockByNumber"
+	var params []interface{}
+	params = append(params, blkNum)
+	jm.Params,_ = json.Marshal(params)
+	jmm,_ := json.Marshal(jm)
 	if url != "" {
-		response, err := http.Get(url)
+		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
 
 		if err != nil {
 			fmt.Println(err)
@@ -98,10 +110,17 @@ func QueryTxHash(ctx *cli.Context) error {
 
 	hash := ctx.String(CliTxHash.Name)
 	port := ctx.String(CliRest.Name)
-	url := "http://" + "127.0.0.1:" + port + "/querytx/" + hash
+
+	url := "http://" + "127.0.0.1:" + port + "/"
+	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm.Method = "getBlockByHash"
+	var params []interface{}
+	params = append(params, hash)
+	jm.Params,_ = json.Marshal(params)
+	jmm,_ := json.Marshal(jm)
 
 	if url != "" {
-		response, err := http.Get(url)
+		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
 
 		if err != nil {
 			fmt.Println(err)
@@ -113,6 +132,7 @@ func QueryTxHash(ctx *cli.Context) error {
 		fmt.Println(">>" + string(result))
 		response.Body.Close()
 	}
+
 	return nil
 }
 

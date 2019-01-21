@@ -5,6 +5,9 @@ import (
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"net/http"
+	"bytes"
+	"HNB/access/rest"
+	"encoding/json"
 )
 
 var (
@@ -26,18 +29,25 @@ var GetNetworkAddr = cli.Command{
 
 func GetAddr(ctx *cli.Context) {
 	port := ctx.String(CliRest.Name)
-
 	fmt.Println("port:" + port)
-	response, err := http.Get("http://" + "127.0.0.1:" + port + "/getaddr")
-	if err != nil {
-		fmt.Println(err)
+	url := "http://" + "127.0.0.1:" + port + "/"
+	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm.Method = "getAddr"
+	jmm,_ := json.Marshal(jm)
+
+	if url != "" {
+		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
+
+		if err != nil {
+			fmt.Println(err)
+		}
+		result, _ := ioutil.ReadAll(response.Body)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(">>" + string(result))
+		response.Body.Close()
 	}
-	result, _ := ioutil.ReadAll(response.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(">>" + string(result))
-	response.Body.Close()
 
 }
 

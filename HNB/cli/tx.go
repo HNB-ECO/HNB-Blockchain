@@ -20,6 +20,8 @@ import (
 	"math/big"
 	"net/http"
 	"HNB/consensus/dbft"
+	"HNB/access/rest"
+	"HNB/rlp"
 )
 
 var (
@@ -289,22 +291,34 @@ func SendMsg(ctx *cli.Context) {
 	address := msp.AccountPubkeyToAddress1(key)
 	msgTx.Payload = payload
 	msgTx.From = address
-	msgTx.Type = chainID
+	msgTx.ContractName = chainID
 	msgTx.NonceValue = uint64(nonce)
 	signer := msp.GetSigner()
 	msgTx.Txid = signer.Hash(&msgTx)
 
-	//msgTxWithSign, err := msp.SignTx(&msgTx, signer)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	mt, _ := json.Marshal(msgTx)
+	err = msp.NewKeyPair().Init("./node.key")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	url := "http://" + "127.0.0.1:" + port + "/sendtxmsg"
+	msgTxWithSign, err := msp.SignTx(&msgTx, signer)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	mt,_ := rlp.EncodeToBytes(msgTxWithSign)
+	url := "http://" + "127.0.0.1:" + port + "/"
+	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm.Method = "sendRawTransaction"
+	var params []interface{}
+	params = append(params, util.ToHex(mt))
+	jm.Params,_ = json.Marshal(params)
+	jmm,_ := json.Marshal(jm)
 
 	if url != "" {
-		response, err := http.Post(url, "application/json", bytes.NewReader(mt))
+		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
 
 		if err != nil {
 			fmt.Println(err)
@@ -337,11 +351,16 @@ func QueryBalance(ctx *cli.Context) {
 		addr = util.ByteToHex(address.GetBytes())
 	}
 	fmt.Println("addr:", addr)
-
-	url = "http://" + "127.0.0.1:" + port + "/querybalance/" + chainID + "/" + addr
-
+	url = "http://" + "127.0.0.1:" + port + "/"
+	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm.Method = "getBalance"
+	var params []interface{}
+	params = append(params, chainID, addr)
+	jm.Params,_ = json.Marshal(params)
+	jmm,_ := json.Marshal(jm)
 	if url != "" {
-		response, err := http.Get(url)
+		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
+
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -388,27 +407,50 @@ func SendVoteMsg(ctx *cli.Context)  {
 	ht.PayLoad,_ = json.Marshal(voteMsg)
 	payload,_ = json.Marshal(ht)
 
-
-
 	msgTx := common.Transaction{}
 	msgTx.Payload = payload
 	msgTx.From = address
-	msgTx.Type = txpool.HNB
+	msgTx.ContractName = txpool.HNB
 	msgTx.NonceValue = uint64(nonce)
 	signer := msp.GetSigner()
 	msgTx.Txid = signer.Hash(&msgTx)
 
-	//msgTxWithSign, err := msp.SignTx(&msgTx, signer)
-	//if err != nil {
+	err = msp.NewKeyPair().Init(path)
+	if err != nil{
+		fmt.Println(err)
+		return
+	}
+
+
+	msgTxWithSign, err := msp.SignTx(&msgTx, signer)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+
+	//f,err := msp.Sender(signer, &msgTx)
+	//if err != nil{
 	//	fmt.Println(err)
 	//	return
 	//}
-	mt,_ := json.Marshal(msgTx)
+	//fmt.Printf("msg %v %v\n",
+	//	util.ByteToHex(address.GetBytes()), util.ByteToHex(f.GetBytes()))
 
-	url := "http://" + "127.0.0.1:" + port + "/sendtxmsg"
+
+
+	mt,_ := rlp.EncodeToBytes(msgTxWithSign)
+
+	url := "http://" + "127.0.0.1:" + port + "/"
+	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm.Method = "sendRawTransaction"
+	var params []interface{}
+	params = append(params, util.ToHex(mt))
+	jm.Params,_ = json.Marshal(params)
+	jmm,_ := json.Marshal(jm)
 
 	if url != "" {
-		response, err := http.Post(url, "application/json", bytes.NewReader(mt))
+		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
 
 		if err != nil {
 			fmt.Println(err)
