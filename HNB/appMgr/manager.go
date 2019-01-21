@@ -133,15 +133,15 @@ func BlockProcess(blk *common.Block) error {
 	s := &ssComm.StateSet{}
 
 	for _, tx := range blk.Txs {
-		handler, err := am.getHandler(tx.Type)
+		handler, err := am.getHandler(tx.ContractName)
 		if err != nil {
 			return err
 		}
 
-		h, ok := apiHandlers[tx.Type]
+		h, ok := apiHandlers[tx.ContractName]
 		if !ok {
-			h = GetContractApi(tx.Type)
-			apiHandlers[tx.Type] = h
+			h = GetContractApi(tx.ContractName)
+			apiHandlers[tx.ContractName] = h
 		}
 
 		h.SetArgs(tx.Payload)
