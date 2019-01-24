@@ -1,4 +1,3 @@
-
 package pkcs11
 
 import (
@@ -16,7 +15,7 @@ import (
 
 func loadLib(lib, pin, label string) (*pkcs11.Ctx, uint, *pkcs11.SessionHandle, error) {
 	var slot uint = 0
-	logger.Debugf(LOGTABLE_BCCSP,"Loading pkcs11 library [%s]\n", lib)
+	logger.Debugf(LOGTABLE_BCCSP, "Loading pkcs11 library [%s]\n", lib)
 	if lib == "" {
 		return nil, slot, nil, fmt.Errorf("No PKCS11 library default")
 	}
@@ -37,7 +36,7 @@ func loadLib(lib, pin, label string) (*pkcs11.Ctx, uint, *pkcs11.SessionHandle, 
 		if err != nil {
 			continue
 		}
-		logger.Debugf(LOGTABLE_BCCSP,"Looking for %s, found label %s\n", label, info.Label)
+		logger.Debugf(LOGTABLE_BCCSP, "Looking for %s, found label %s\n", label, info.Label)
 		if label == info.Label {
 			found = true
 			slot = s
@@ -52,15 +51,15 @@ func loadLib(lib, pin, label string) (*pkcs11.Ctx, uint, *pkcs11.SessionHandle, 
 	for i := 0; i < 10; i++ {
 		session, err = ctx.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 		if err != nil {
-			logger.Warningf(LOGTABLE_BCCSP,"OpenSession failed, retrying [%s]\n", err)
+			logger.Warningf(LOGTABLE_BCCSP, "OpenSession failed, retrying [%s]\n", err)
 		} else {
 			break
 		}
 	}
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"OpenSession [%s]\n", err)
+		logger.Errorf(LOGTABLE_BCCSP, "OpenSession [%s]\n", err)
 	}
-	logger.Debugf(LOGTABLE_BCCSP,"Created new pkcs11 session %+v on slot %d\n", session, slot)
+	logger.Debugf(LOGTABLE_BCCSP, "Created new pkcs11 session %+v on slot %d\n", session, slot)
 
 	if pin == "" {
 		return nil, slot, nil, fmt.Errorf("No PIN set\n")
@@ -78,7 +77,7 @@ func loadLib(lib, pin, label string) (*pkcs11.Ctx, uint, *pkcs11.SessionHandle, 
 func (csp *impl) getSession() (session pkcs11.SessionHandle) {
 	select {
 	case session = <-csp.sessions:
-		logger.Debugf(LOGTABLE_BCCSP,"Reusing existing pkcs11 session %+v on slot %d\n", session, csp.slot)
+		logger.Debugf(LOGTABLE_BCCSP, "Reusing existing pkcs11 session %+v on slot %d\n", session, csp.slot)
 
 	default:
 		var s pkcs11.SessionHandle
@@ -86,7 +85,7 @@ func (csp *impl) getSession() (session pkcs11.SessionHandle) {
 		for i := 0; i < 10; i++ {
 			s, err = csp.ctx.OpenSession(csp.slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 			if err != nil {
-				logger.Warningf(LOGTABLE_BCCSP,"OpenSession failed, retrying [%s]\n", err.Error())
+				logger.Warningf(LOGTABLE_BCCSP, "OpenSession failed, retrying [%s]\n", err.Error())
 			} else {
 				break
 			}
@@ -94,7 +93,7 @@ func (csp *impl) getSession() (session pkcs11.SessionHandle) {
 		if err != nil {
 			panic(fmt.Errorf("OpenSession failed [%s]\n", err))
 		}
-		logger.Debugf(LOGTABLE_BCCSP,"Created new pkcs11 session %+v on slot %d\n", s, csp.slot)
+		logger.Debugf(LOGTABLE_BCCSP, "Created new pkcs11 session %+v on slot %d\n", s, csp.slot)
 		session = s
 	}
 	return session
@@ -116,7 +115,7 @@ func (csp *impl) getECKey(ski []byte) (pubKey *ecdsa.PublicKey, isPriv bool, err
 	_, err = findKeyPairFromSKI(p11lib, session, ski, privateKeyFlag)
 	if err != nil {
 		isPriv = false
-		logger.Debugf(LOGTABLE_BCCSP,"Private key not found [%s] for SKI [%s], looking for Public key", err.Error(), hex.EncodeToString(ski))
+		logger.Debugf(LOGTABLE_BCCSP, "Private key not found [%s] for SKI [%s], looking for Public key", err.Error(), hex.EncodeToString(ski))
 	}
 
 	publicKey, err := findKeyPairFromSKI(p11lib, session, ski, publicKeyFlag)
@@ -147,7 +146,6 @@ func (csp *impl) getECKey(ski []byte) (pubKey *ecdsa.PublicKey, isPriv bool, err
 	pubKey = &ecdsa.PublicKey{Curve: curve, X: x, Y: y}
 	return pubKey, isPriv, nil
 }
-
 
 var (
 	oidNamedCurveP224 = asn1.ObjectIdentifier{1, 3, 132, 0, 33}
@@ -241,7 +239,7 @@ func (csp *impl) generateECKey(curve asn1.ObjectIdentifier, ephemeral bool) (ski
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, hex.EncodeToString(ski)),
 	}
 
-	logger.Infof(LOGTABLE_BCCSP,"Generated new P11 key, SKI %x\n", ski)
+	logger.Infof(LOGTABLE_BCCSP, "Generated new P11 key, SKI %x\n", ski)
 	err = p11lib.SetAttributeValue(session, pub, setski_t)
 	if err != nil {
 		return nil, nil, fmt.Errorf("P11: set-ID-to-SKI[public] failed [%s]\n", err)
@@ -306,7 +304,7 @@ func (csp *impl) verifyP11ECDSA(ski []byte, msg []byte, R, S *big.Int, byteSize 
 	session := csp.getSession()
 	defer csp.returnSession(session)
 
-	logger.Debugf(LOGTABLE_BCCSP,"Verify ECDSA\n")
+	logger.Debugf(LOGTABLE_BCCSP, "Verify ECDSA\n")
 
 	publicKey, err := findKeyPairFromSKI(p11lib, session, ski, publicKeyFlag)
 	if err != nil {
@@ -348,7 +346,7 @@ func (csp *impl) importECKey(curve asn1.ObjectIdentifier, privKey, ecPt []byte, 
 
 	var keyTemplate []*pkcs11.Attribute
 	if keyType == publicKeyFlag {
-		logger.Debugf(LOGTABLE_BCCSP,"Importing Public EC Key")
+		logger.Debugf(LOGTABLE_BCCSP, "Importing Public EC Key")
 
 		hash := sha256.Sum256(ecPt)
 		ski = hash[:]
@@ -375,7 +373,7 @@ func (csp *impl) importECKey(curve asn1.ObjectIdentifier, privKey, ecPt []byte, 
 			return nil, fmt.Errorf("Failed importing private EC Key [%s]\n", err)
 		}
 
-		logger.Debugf(LOGTABLE_BCCSP,"Importing Private EC Key [%d]\n%s\n", len(privKey)*8, hex.Dump(privKey))
+		logger.Debugf(LOGTABLE_BCCSP, "Importing Private EC Key [%d]\n%s\n", len(privKey)*8, hex.Dump(privKey))
 		prvlabel := hex.EncodeToString(ski)
 		keyTemplate = []*pkcs11.Attribute{
 			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
@@ -397,7 +395,6 @@ func (csp *impl) importECKey(curve asn1.ObjectIdentifier, privKey, ecPt []byte, 
 	if err != nil {
 		return nil, fmt.Errorf("P11: keypair generate failed [%s]\n", err)
 	}
-
 
 	//keyHandle, err := p11lib.CreateObject(session, keyTemplate)
 	//if err != nil {
@@ -458,21 +455,22 @@ func ecPoint(p11lib *pkcs11.Ctx, session pkcs11.SessionHandle, key pkcs11.Object
 
 	for _, a := range attr {
 		if a.Type == pkcs11.CKA_EC_POINT {
-			logger.Debugf(LOGTABLE_BCCSP,"EC point: attr type %d/0x%x, len %d\n%s\n", a.Type, a.Type, len(a.Value), hex.Dump(a.Value))
+			logger.Debugf(LOGTABLE_BCCSP, "EC point: attr type %d/0x%x, len %d\n%s\n", a.Type, a.Type, len(a.Value), hex.Dump(a.Value))
 
+			// workarounds, see above
 			if (0 == (len(a.Value) % 2)) &&
 				(byte(0x04) == a.Value[0]) &&
 				(byte(0x04) == a.Value[len(a.Value)-1]) {
-				logger.Debugf(LOGTABLE_BCCSP,"Detected opencryptoki bug, trimming trailing 0x04")
+				logger.Debugf(LOGTABLE_BCCSP, "Detected opencryptoki bug, trimming trailing 0x04")
 				ecpt = a.Value[0 : len(a.Value)-1] // Trim trailing 0x04
 			} else if byte(0x04) == a.Value[0] && byte(0x04) == a.Value[2] {
-				logger.Debugf(LOGTABLE_BCCSP,"Detected SoftHSM bug, trimming leading 0x04 0xXX")
+				logger.Debugf(LOGTABLE_BCCSP, "Detected SoftHSM bug, trimming leading 0x04 0xXX")
 				ecpt = a.Value[2:len(a.Value)]
 			} else {
 				ecpt = a.Value
 			}
 		} else if a.Type == pkcs11.CKA_EC_PARAMS {
-			logger.Debugf(LOGTABLE_BCCSP,"EC point: attr type %d/0x%x, len %d\n%s\n", a.Type, a.Type, len(a.Value), hex.Dump(a.Value))
+			logger.Debugf(LOGTABLE_BCCSP, "EC point: attr type %d/0x%x, len %d\n%s\n", a.Type, a.Type, len(a.Value), hex.Dump(a.Value))
 
 			oid = a.Value
 		}
@@ -501,11 +499,11 @@ func listAttrs(p11lib *pkcs11.Ctx, session pkcs11.SessionHandle, obj pkcs11.Obje
 
 	attr, err := p11lib.GetAttributeValue(session, obj, template)
 	if err != nil {
-		logger.Debugf(LOGTABLE_BCCSP,"P11: get(attrlist) [%s]\n", err)
+		logger.Debugf(LOGTABLE_BCCSP, "P11: get(attrlist) [%s]\n", err)
 	}
 
 	for _, a := range attr {
-		logger.Debugf(LOGTABLE_BCCSP,"ListAttr: type %d/0x%x, length %d\n%s", a.Type, a.Type, len(a.Value), hex.Dump(a.Value))
+		logger.Debugf(LOGTABLE_BCCSP, "ListAttr: type %d/0x%x, length %d\n%s", a.Type, a.Type, len(a.Value), hex.Dump(a.Value))
 	}
 }
 
@@ -523,14 +521,14 @@ func (csp *impl) getSecretValue(ski []byte) []byte {
 
 	attr, err := p11lib.GetAttributeValue(session, *keyHandle, template)
 	if err != nil {
-		logger.Warningf(LOGTABLE_BCCSP,"P11: get(attrlist) [%s]\n", err)
+		logger.Warningf(LOGTABLE_BCCSP, "P11: get(attrlist) [%s]\n", err)
 	}
 
 	for _, a := range attr {
-		logger.Debugf(LOGTABLE_BCCSP,"ListAttr: type %d/0x%x, length %d\n%s", a.Type, a.Type, len(a.Value), hex.Dump(a.Value))
+		logger.Debugf(LOGTABLE_BCCSP, "ListAttr: type %d/0x%x, length %d\n%s", a.Type, a.Type, len(a.Value), hex.Dump(a.Value))
 		return a.Value
 	}
-	logger.Warningf(LOGTABLE_BCCSP,"No Key Value found!", err)
+	logger.Warningf(LOGTABLE_BCCSP, "No Key Value found!", err)
 	return nil
 }
 

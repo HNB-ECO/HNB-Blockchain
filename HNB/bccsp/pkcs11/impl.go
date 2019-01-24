@@ -1,4 +1,3 @@
-
 package pkcs11
 
 import (
@@ -285,8 +284,8 @@ func (csp *impl) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.K
 			ski = hash[:]
 		} else {
 			if !csp.softVerify {
-				logger.Debugf(LOGTABLE_BCCSP,"opencryptoki workaround warning: Importing public EC Key does not store out to pkcs11 store,\n" +
-					"so verify with this key will fail, unless key is already present in store. Enable 'softwareverify'\n" +
+				logger.Debugf(LOGTABLE_BCCSP, "opencryptoki workaround warning: Importing public EC Key does not store out to pkcs11 store,\n"+
+					"so verify with this key will fail, unless key is already present in store. Enable 'softwareverify'\n"+
 					"in pkcs11 options, if suspect this issue.")
 			}
 			ski, err = csp.importECKey(oid, nil, ecPt, opts.Ephemeral(), publicKeyFlag)
@@ -354,8 +353,8 @@ func (csp *impl) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.K
 			ski = hash[:]
 		} else {
 			if !csp.softVerify {
-				logger.Debugf(LOGTABLE_BCCSP,"opencryptoki workaround warning: Importing public EC Key does not store out to pkcs11 store,\n" +
-					"so verify with this key will fail, unless key is already present in store. Enable 'softwareverify'\n" +
+				logger.Debugf(LOGTABLE_BCCSP, "opencryptoki workaround warning: Importing public EC Key does not store out to pkcs11 store,\n"+
+					"so verify with this key will fail, unless key is already present in store. Enable 'softwareverify'\n"+
 					"in pkcs11 options, if suspect this issue.")
 			}
 			ski, err = csp.importECKey(oid, nil, ecPt, opts.Ephemeral(), publicKeyFlag)
@@ -402,7 +401,6 @@ func (csp *impl) GetKey(ski []byte) (k bccsp.Key, err error) {
 	return csp.BCCSP.GetKey(ski)
 }
 
-
 func (csp *impl) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) {
 
 	if k == nil {
@@ -411,7 +409,6 @@ func (csp *impl) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signat
 	if len(digest) == 0 {
 		return nil, errors.New("Invalid digest. Cannot be empty.")
 	}
-
 
 	switch k.(type) {
 	case *ecdsaPrivateKey:
@@ -433,7 +430,6 @@ func (csp *impl) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.Signer
 		return false, errors.New("Invalid digest. Cannot be empty.")
 	}
 
-
 	switch k.(type) {
 	case *ecdsaPrivateKey:
 		return csp.verifyECDSA(k.(*ecdsaPrivateKey).pub, signature, digest, opts)
@@ -445,6 +441,7 @@ func (csp *impl) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.Signer
 }
 
 func (csp *impl) Encrypt(k bccsp.Key, plaintext []byte, opts bccsp.EncrypterOpts) (ciphertext []byte, err error) {
+	// TODO: Add PKCS11 support for encryption, when hnb starts requiring it
 	return csp.BCCSP.Encrypt(k, plaintext, opts)
 }
 
@@ -453,6 +450,7 @@ func (csp *impl) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.DecrypterOpt
 }
 
 func FindPKCS11Lib() (lib, pin, label string) {
+	//FIXME: Till we workout the configuration piece, look for the libraries in the familiar places
 	lib = os.Getenv("PKCS11_LIB")
 	if lib == "" {
 		pin = "98765432"
