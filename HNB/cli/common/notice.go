@@ -1,8 +1,7 @@
-
-
 package common
 
 import "fmt"
+
 func PrintNotice(name string) {
 	switch name {
 	case "key type":
@@ -34,19 +33,12 @@ This determines the length of the private key [default is 2]: `)
 		fmt.Printf(`
 Select a signature scheme from the following:
 
-  1  SHA224withECDSA
-  2  SHA256withECDSA
-  3  SHA384withECDSA
-  4  SHA512withECDSA
-  5  SHA3-224withECDSA
-  6  SHA3-256withECDSA
-  7  SHA3-384withECDSA
-  8  SHA3-512withECDSA
-  9  RIPEMD160withECDSA
+  1  SHA256withECDSA
 
-This can be changed later [default is 2]: `)
+This can be changed later [default is 1]: `)
 		break
 
 	default:
 	}
 }
+
