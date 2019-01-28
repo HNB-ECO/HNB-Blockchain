@@ -1,37 +1,27 @@
-
-
 package bccsp
 
 import "fmt"
 
-
 type SHA256Opts struct {
 }
-
 
 func (opts *SHA256Opts) Algorithm() string {
 	return SHA256
 }
 
-
 type SHA384Opts struct {
 }
-
-
 
 func (opts *SHA384Opts) Algorithm() string {
 	return SHA384
 }
 
-
 type SHA3_256Opts struct {
 }
-
 
 func (opts *SHA3_256Opts) Algorithm() string {
 	return SHA3_256
 }
-
 
 type SHA3_384Opts struct {
 }

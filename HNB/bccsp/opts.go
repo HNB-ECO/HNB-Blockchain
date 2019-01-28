@@ -227,4 +227,3 @@ func (opts *X509PublicKeyImportOpts) Algorithm() string {
 func (opts *X509PublicKeyImportOpts) Ephemeral() bool {
 	return opts.Temporary
 }
-

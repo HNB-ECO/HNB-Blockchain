@@ -1,4 +1,3 @@
-
 package sw
 
 import (
@@ -13,9 +12,8 @@ import (
 	"encoding/asn1"
 	"math/big"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
-
 
 type rsaPublicKeyASN struct {
 	N *big.Int
@@ -53,7 +51,6 @@ func (k *rsaPrivateKey) Private() bool {
 	return true
 }
 
-
 func (k *rsaPrivateKey) PublicKey() (bccsp.Key, error) {
 	return &rsaPublicKey{&k.privKey.PublicKey}, nil
 }
@@ -61,7 +58,6 @@ func (k *rsaPrivateKey) PublicKey() (bccsp.Key, error) {
 type rsaPublicKey struct {
 	pubKey *rsa.PublicKey
 }
-
 
 func (k *rsaPublicKey) Bytes() (raw []byte, err error) {
 	if k.pubKey == nil {

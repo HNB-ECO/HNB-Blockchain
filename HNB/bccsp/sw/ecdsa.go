@@ -1,4 +1,3 @@
-
 package sw
 
 import (
@@ -10,7 +9,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 type ECDSASignature struct {
@@ -37,7 +36,6 @@ func UnmarshalECDSASignature(raw []byte) (*big.Int, *big.Int, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed unmashalling signature [%s]", err)
 	}
-
 
 	if sig.R == nil {
 		return nil, nil, errors.New("Invalid signature. R must be different from nil.")
@@ -106,9 +104,19 @@ func SignatureToLowS(k *ecdsa.PublicKey, signature []byte) ([]byte, error) {
 	return signature, nil
 }
 
-
 func IsLowS(k *ecdsa.PublicKey, s *big.Int) (bool, error) {
-	halfOrder, ok := curveHalfOrders[k.Curve]
+	var curve elliptic.Curve
+	switch k.Curve.Params().BitSize {
+	case 224:
+		curve = elliptic.P224()
+	case 256:
+		curve = elliptic.P256()
+	case 384:
+		curve = elliptic.P384()
+	case 521:
+		curve = elliptic.P521()
+	}
+	halfOrder, ok := curveHalfOrders[curve]
 	if !ok {
 		return false, fmt.Errorf("Curve not recognized [%s]", k.Curve)
 	}
@@ -147,5 +155,5 @@ func (v *ecdsaPrivateKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, 
 type ecdsaPublicKeyKeyVerifier struct{}
 
 func (v *ecdsaPublicKeyKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) {
-	return verifyECDSA(k.(*ecdsaPublicKey).pubKey, signature, digest, opts)
+	return verifyECDSA(k.(*EcdsaPublicKey).PubKey, signature, digest, opts)
 }

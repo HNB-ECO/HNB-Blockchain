@@ -1,4 +1,3 @@
-
 package sw
 
 import (
@@ -16,8 +15,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/utils"
+	"HNB/bccsp"
+	"HNB/bccsp/utils"
 )
 
 func NewFileBasedKeyStore(pwd []byte, path string, readOnly bool) (bccsp.KeyStore, error) {
@@ -33,13 +32,10 @@ type fileBasedKeyStore struct {
 
 	pwd []byte
 
-
 	m sync.Mutex
 }
 
-
 func (ks *fileBasedKeyStore) Init(pwd []byte, path string, readOnly bool) error {
-
 
 	if len(path) == 0 {
 		return errors.New("An invalid KeyStore path provided. Path cannot be an empty string.")
@@ -235,13 +231,13 @@ func (ks *fileBasedKeyStore) getSuffix(alias string) string {
 func (ks *fileBasedKeyStore) storePrivateKey(alias string, privateKey interface{}) error {
 	rawKey, err := utils.PrivateKeyToPEM(privateKey, ks.pwd)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed converting private key to PEM [%s]: [%s]", alias, err)
+		logger.Errorf(LOGTABLE_BCCSP, "Failed converting private key to PEM [%s]: [%s]", alias, err)
 		return err
 	}
 
 	err = ioutil.WriteFile(ks.getPathForAlias(alias, "sk"), rawKey, 0700)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed storing private key [%s]: [%s]", alias, err)
+		logger.Errorf(LOGTABLE_BCCSP, "Failed storing private key [%s]: [%s]", alias, err)
 		return err
 	}
 
@@ -251,13 +247,13 @@ func (ks *fileBasedKeyStore) storePrivateKey(alias string, privateKey interface{
 func (ks *fileBasedKeyStore) storePublicKey(alias string, publicKey interface{}) error {
 	rawKey, err := utils.PublicKeyToPEM(publicKey, ks.pwd)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed converting public key to PEM [%s]: [%s]", alias, err)
+		logger.Errorf(LOGTABLE_BCCSP, "Failed converting public key to PEM [%s]: [%s]", alias, err)
 		return err
 	}
 
 	err = ioutil.WriteFile(ks.getPathForAlias(alias, "pk"), rawKey, 0700)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed storing private key [%s]: [%s]", alias, err)
+		logger.Errorf(LOGTABLE_BCCSP, "Failed storing private key [%s]: [%s]", alias, err)
 		return err
 	}
 
@@ -267,13 +263,13 @@ func (ks *fileBasedKeyStore) storePublicKey(alias string, publicKey interface{})
 func (ks *fileBasedKeyStore) storeKey(alias string, key []byte) error {
 	pem, err := utils.AEStoEncryptedPEM(key, ks.pwd)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed converting key to PEM [%s]: [%s]", alias, err)
+		logger.Errorf(LOGTABLE_BCCSP, "Failed converting key to PEM [%s]: [%s]", alias, err)
 		return err
 	}
 
 	err = ioutil.WriteFile(ks.getPathForAlias(alias, "key"), pem, 0700)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed storing key [%s]: [%s]", alias, err)
+		logger.Errorf(LOGTABLE_BCCSP, "Failed storing key [%s]: [%s]", alias, err)
 		return err
 	}
 
@@ -282,18 +278,18 @@ func (ks *fileBasedKeyStore) storeKey(alias string, key []byte) error {
 
 func (ks *fileBasedKeyStore) loadPrivateKey(alias string) (interface{}, error) {
 	path := ks.getPathForAlias(alias, "sk")
-	logger.Debugf(LOGTABLE_BCCSP,"Loading private key [%s] at [%s]...", alias, path)
+	logger.Debugf(LOGTABLE_BCCSP, "Loading private key [%s] at [%s]...", alias, path)
 
 	raw, err := ioutil.ReadFile(path)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed loading private key [%s]: [%s].", alias, err.Error())
+		logger.Errorf(LOGTABLE_BCCSP, "Failed loading private key [%s]: [%s].", alias, err.Error())
 
 		return nil, err
 	}
 
 	privateKey, err := utils.PEMtoPrivateKey(raw, ks.pwd)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed parsing private key [%s]: [%s].", alias, err.Error())
+		logger.Errorf(LOGTABLE_BCCSP, "Failed parsing private key [%s]: [%s].", alias, err.Error())
 
 		return nil, err
 	}
@@ -303,18 +299,18 @@ func (ks *fileBasedKeyStore) loadPrivateKey(alias string) (interface{}, error) {
 
 func (ks *fileBasedKeyStore) loadPublicKey(alias string) (interface{}, error) {
 	path := ks.getPathForAlias(alias, "pk")
-	logger.Debugf(LOGTABLE_BCCSP,"Loading public key [%s] at [%s]...", alias, path)
+	logger.Debugf(LOGTABLE_BCCSP, "Loading public key [%s] at [%s]...", alias, path)
 
 	raw, err := ioutil.ReadFile(path)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed loading public key [%s]: [%s].", alias, err.Error())
+		logger.Errorf(LOGTABLE_BCCSP, "Failed loading public key [%s]: [%s].", alias, err.Error())
 
 		return nil, err
 	}
 
 	privateKey, err := utils.PEMtoPublicKey(raw, ks.pwd)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed parsing private key [%s]: [%s].", alias, err.Error())
+		logger.Errorf(LOGTABLE_BCCSP, "Failed parsing private key [%s]: [%s].", alias, err.Error())
 
 		return nil, err
 	}
@@ -324,18 +320,18 @@ func (ks *fileBasedKeyStore) loadPublicKey(alias string) (interface{}, error) {
 
 func (ks *fileBasedKeyStore) loadKey(alias string) ([]byte, error) {
 	path := ks.getPathForAlias(alias, "key")
-	logger.Debugf(LOGTABLE_BCCSP,"Loading key [%s] at [%s]...", alias, path)
+	logger.Debugf(LOGTABLE_BCCSP, "Loading key [%s] at [%s]...", alias, path)
 
 	pem, err := ioutil.ReadFile(path)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed loading key [%s]: [%s].", alias, err.Error())
+		logger.Errorf(LOGTABLE_BCCSP, "Failed loading key [%s]: [%s].", alias, err.Error())
 
 		return nil, err
 	}
 
 	key, err := utils.PEMtoAES(pem, ks.pwd)
 	if err != nil {
-		logger.Errorf(LOGTABLE_BCCSP,"Failed parsing key [%s]: [%s]", alias, err)
+		logger.Errorf(LOGTABLE_BCCSP, "Failed parsing key [%s]: [%s]", alias, err)
 
 		return nil, err
 	}

@@ -1,4 +1,3 @@
-
 package pkcs11
 
 import (

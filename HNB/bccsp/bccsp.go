@@ -1,4 +1,3 @@
-
 package bccsp
 
 import (
@@ -7,7 +6,6 @@ import (
 )
 
 type Key interface {
-
 	Bytes() ([]byte, error)
 
 	SKI() []byte
@@ -20,28 +18,24 @@ type Key interface {
 }
 
 type KeyGenOpts interface {
-
 	Algorithm() string
 
 	Ephemeral() bool
 }
 
 type KeyDerivOpts interface {
-
 	Algorithm() string
 
 	Ephemeral() bool
 }
 
 type KeyImportOpts interface {
-
 	Algorithm() string
 
 	Ephemeral() bool
 }
 
 type HashOpts interface {
-
 	Algorithm() string
 }
 
@@ -54,7 +48,6 @@ type EncrypterOpts interface{}
 type DecrypterOpts interface{}
 
 type BCCSP interface {
-
 	KeyGen(opts KeyGenOpts) (k Key, err error)
 
 	KeyDeriv(k Key, opts KeyDerivOpts) (dk Key, err error)

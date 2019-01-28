@@ -1,5 +1,3 @@
-
-
 package utils
 
 func Clone(src []byte) []byte {

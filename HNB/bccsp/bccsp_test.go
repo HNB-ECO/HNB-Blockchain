@@ -1,5 +1,3 @@
-
-
 package bccsp
 
 import (
@@ -7,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"HNB/bccsp/factory"
+	"bytes"
 	"github.com/stretchr/testify/assert"
 )
 

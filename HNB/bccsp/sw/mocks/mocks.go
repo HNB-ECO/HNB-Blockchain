@@ -5,7 +5,7 @@ import (
 	"hash"
 	"reflect"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 type Encryptor struct {

@@ -1,5 +1,3 @@
-
-
 package bccsp
 
 type AES128KeyGenOpts struct {
@@ -9,7 +7,6 @@ type AES128KeyGenOpts struct {
 func (opts *AES128KeyGenOpts) Algorithm() string {
 	return AES128
 }
-
 
 func (opts *AES128KeyGenOpts) Ephemeral() bool {
 	return opts.Temporary
@@ -22,7 +19,6 @@ type AES192KeyGenOpts struct {
 func (opts *AES192KeyGenOpts) Algorithm() string {
 	return AES192
 }
-
 
 func (opts *AES192KeyGenOpts) Ephemeral() bool {
 	return opts.Temporary

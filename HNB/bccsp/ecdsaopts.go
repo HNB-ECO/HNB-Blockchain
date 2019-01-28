@@ -1,4 +1,3 @@
-
 package bccsp
 
 type ECDSAP256K1KeyGenOpts struct {
@@ -12,8 +11,6 @@ func (opts *ECDSAP256K1KeyGenOpts) Algorithm() string {
 func (opts *ECDSAP256K1KeyGenOpts) Ephemeral() bool {
 	return opts.Temporary
 }
-
-
 
 type ECDSAP256KeyGenOpts struct {
 	Temporary bool

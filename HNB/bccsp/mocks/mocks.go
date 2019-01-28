@@ -166,4 +166,3 @@ func (*KeyDerivOpts) Algorithm() string {
 func (o *KeyDerivOpts) Ephemeral() bool {
 	return o.EphemeralValue
 }
-

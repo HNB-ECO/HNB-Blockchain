@@ -1,5 +1,3 @@
-
-
 package sw
 
 import (
@@ -11,8 +9,11 @@ import (
 	"crypto/x509"
 	"reflect"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/utils"
+	"HNB/bccsp"
+	"HNB/bccsp/secp256k1"
+	"HNB/bccsp/utils"
+	//"math/big"
+	"math/big"
 )
 
 type aes256ImportKeyOptsKeyImporter struct{}
@@ -145,4 +146,25 @@ func (ki *x509PublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bc
 	default:
 		return nil, errors.New("Certificate's public key type not recognized. Supported keys: [ECDSA, RSA]")
 	}
+}
+
+type ecdsaPrivateKey256K1ImportOptsKeyImporter struct{}
+
+func (*ecdsaPrivateKey256K1ImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Key, err error) {
+	d, ok := raw.([]byte)
+	if !ok {
+		return nil, errors.New("[ECDSADERPrivateKeyK1ImportOpts] Invalid raw material. Expected byte array.")
+	}
+
+	if len(d) == 0 {
+		return nil, errors.New("[ECDSADERPrivateKeyK1ImportOpts] Invalid raw. It must not be nil.")
+	}
+
+	privKey := ecdsa.PrivateKey{}
+	privKey.D = new(big.Int)
+	privKey.D.SetBytes(d)
+	privKey.Curve = secp256k1.S256()
+	privKey.X, privKey.Y = secp256k1.S256().ScalarBaseMult(d)
+
+	return &Ecdsa256K1PrivateKey{&privKey}, nil
 }
