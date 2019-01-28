@@ -91,6 +91,7 @@ var funcList = map[string] func(params json.RawMessage) (interface{}, error){
 	"getTxPool":          GetTxPoolQueue,
 	"getBalance":         QueryBalanceMsg,
 	"sendRawTransaction": SendTxMsg,
+	"getNonce":			  GetNonce,
 }
 
 func StartRESTServer() {
@@ -111,3 +112,4 @@ func StartRESTServer() {
 		}
 	}()
 }
+

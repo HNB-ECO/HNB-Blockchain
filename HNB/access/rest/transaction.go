@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"errors"
 	"HNB/rlp"
+	"HNB/config"
 )
 
 func QueryBalanceMsg(params json.RawMessage)  (interface{}, error){
@@ -149,14 +150,18 @@ func SendTxMsg(params json.RawMessage)  (interface{}, error){
 
 	msgTx.Txid = common.Hash{}
 
-	//address := msp.AccountPubkeyToAddress()
-	//if msgTx.NonceValue == 0 {
-	//	AccLockMgr.Lock(address)
-	//	defer AccLockMgr.UnLock(address)
-	//
-	//	nonce := txpool.GetPendingNonce(address)
-	//	msgTx.NonceValue = nonce
-	//}
+	//测试使用
+	if config.Config.RunMode != "dev"{
+		address := msp.AccountPubkeyToAddress()
+		if msgTx.NonceValue == 0 {
+			AccLockMgr.Lock(address)
+			defer AccLockMgr.UnLock(address)
+
+			nonce := txpool.GetPendingNonce(address)
+			msgTx.NonceValue = nonce
+		}
+	}
+
 
 	//msgTx.From = address
 	//signer := msp.GetSigner()
