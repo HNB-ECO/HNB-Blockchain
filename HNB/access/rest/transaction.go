@@ -2,45 +2,45 @@ package rest
 
 import (
 	"HNB/appMgr"
+	appComm "HNB/appMgr/common"
 	"HNB/common"
+	"HNB/config"
 	"HNB/contract/hgs"
 	"HNB/contract/hnb"
 	"HNB/msp"
+	"HNB/rlp"
 	"HNB/txpool"
 	"HNB/util"
-	"encoding/json"
-	"sync"
-	"strconv"
 	"bytes"
+	"encoding/json"
 	"errors"
-	"HNB/rlp"
-	"HNB/config"
+	"strconv"
+	"sync"
 )
 
-func QueryBalanceMsg(params json.RawMessage)  (interface{}, error){
+func QueryBalanceMsg(params json.RawMessage) (interface{}, error) {
 	dec := json.NewDecoder(bytes.NewReader(params))
 	if tok, _ := dec.Token(); tok != json.Delim('[') {
 		return nil, errors.New("no [")
 	}
 
-	if !dec.More(){
+	if !dec.More() {
 		return nil, errors.New("data not complete")
 	}
-	var chainID,addr string
+	var chainID, addr string
 	err := dec.Decode(&chainID)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
-	if !dec.More(){
+	if !dec.More() {
 		return nil, errors.New("data not complete")
 	}
 	err = dec.Decode(&addr)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
-
-	if chainID == txpool.HGS {
+	if chainID == appComm.HGS {
 		qh := &hgs.QryHgsTx{}
 		qh.TxType = hnb.BALANCE
 		qh.PayLoad = util.HexToByte(addr)
@@ -51,14 +51,14 @@ func QueryBalanceMsg(params json.RawMessage)  (interface{}, error){
 			return nil, err
 		} else {
 			var bal int64
-			if msg == nil{
+			if msg == nil {
 				bal = 0
-			}else{
-				bal,_ = strconv.ParseInt(string(msg), 10, 64)
+			} else {
+				bal, _ = strconv.ParseInt(string(msg), 10, 64)
 			}
 			return bal, nil
 		}
-	} else if chainID == txpool.HNB {
+	} else if chainID == appComm.HNB {
 		qh := &hnb.QryHnbTx{}
 		qh.TxType = hnb.BALANCE
 		qh.PayLoad = util.HexToByte(addr)
@@ -69,10 +69,10 @@ func QueryBalanceMsg(params json.RawMessage)  (interface{}, error){
 			return nil, err
 		} else {
 			var bal int64
-			if msg == nil{
+			if msg == nil {
 				bal = 0
-			}else{
-				bal,_ = strconv.ParseInt(string(msg), 10, 64)
+			} else {
+				bal, _ = strconv.ParseInt(string(msg), 10, 64)
 			}
 			return bal, nil
 		}
@@ -116,7 +116,7 @@ func (alm *AccountLock) UnLock(address common.Address) {
 	lock.Unlock()
 }
 
-func SendTxMsg(params json.RawMessage)  (interface{}, error){
+func SendTxMsg(params json.RawMessage) (interface{}, error) {
 	//from
 	//value1
 	//contractName
@@ -132,26 +132,26 @@ func SendTxMsg(params json.RawMessage)  (interface{}, error){
 		return nil, errors.New("no [")
 	}
 
-	if !dec.More(){
+	if !dec.More() {
 		return nil, errors.New("data not complete")
 	}
 
 	var rawTransaction string
 	err := dec.Decode(&rawTransaction)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
 	msgTx := &common.Transaction{}
 	err = rlp.DecodeBytes(util.FromHex(rawTransaction), msgTx)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
 	msgTx.Txid = common.Hash{}
 
 	//测试使用
-	if config.Config.RunMode != "dev"{
+	if config.Config.RunMode != "dev" {
 		address := msp.AccountPubkeyToAddress()
 		if msgTx.NonceValue == 0 {
 			AccLockMgr.Lock(address)
@@ -161,7 +161,6 @@ func SendTxMsg(params json.RawMessage)  (interface{}, error){
 			msgTx.NonceValue = nonce
 		}
 	}
-
 
 	//msgTx.From = address
 	//signer := msp.GetSigner()

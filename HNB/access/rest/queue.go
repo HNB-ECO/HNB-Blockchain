@@ -1,12 +1,12 @@
 package rest
 
 import (
+	"HNB/common"
 	"HNB/txpool"
 	"HNB/util"
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"errors"
-	"HNB/common"
 )
 
 type TxsInfo struct {
@@ -20,7 +20,7 @@ type TxInfo struct {
 	Txid  string `json:"txid"`
 }
 
-func GetTxPoolQueue(params json.RawMessage)  (interface{}, error){
+func GetTxPoolQueue(params json.RawMessage) (interface{}, error) {
 	queue, pending := txpool.GetContent()
 	var queueInfo, pendingInfo []*TxInfo
 
@@ -48,19 +48,19 @@ func GetTxPoolQueue(params json.RawMessage)  (interface{}, error){
 	return tsi, nil
 }
 
-func GetNonce(params json.RawMessage)  (interface{}, error){
+func GetNonce(params json.RawMessage) (interface{}, error) {
 	dec := json.NewDecoder(bytes.NewReader(params))
 	if tok, _ := dec.Token(); tok != json.Delim('[') {
 		return nil, errors.New("no [")
 	}
 
-	if !dec.More(){
+	if !dec.More() {
 		return nil, errors.New("data not complete")
 	}
 
 	var address string
 	err := dec.Decode(&address)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 

@@ -2,16 +2,15 @@ package rest
 
 import (
 	"HNB/ledger"
-	"encoding/json"
-	"fmt"
-	"strconv"
 	"HNB/util"
 	"bytes"
-	"github.com/pkg/errors"
+	"encoding/json"
+	"fmt"
+	"errors"
+	"strconv"
 )
 
-
-func HighestBlockNum(params json.RawMessage)  (interface{}, error){
+func HighestBlockNum(params json.RawMessage) (interface{}, error) {
 	//fmt.Printf("params:%v\n", string(params))
 
 	//dec := json.NewDecoder(bytes.NewReader(params))
@@ -24,19 +23,19 @@ func HighestBlockNum(params json.RawMessage)  (interface{}, error){
 	return height - 1, nil
 }
 
-func Block(params json.RawMessage)  (interface{}, error){
+func Block(params json.RawMessage) (interface{}, error) {
 	dec := json.NewDecoder(bytes.NewReader(params))
 
 	if tok, _ := dec.Token(); tok != json.Delim('[') {
 		return nil, errors.New("no [")
 	}
 
-	if !dec.More(){
+	if !dec.More() {
 		return nil, errors.New("data not complete")
 	}
 	var blkNum uint64
 	err := dec.Decode(&blkNum)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	height, _ := ledger.GetBlockHeight()
@@ -51,33 +50,75 @@ func Block(params json.RawMessage)  (interface{}, error){
 	return blkInfo, nil
 }
 
-func TxHash(params json.RawMessage)  (interface{}, error){
+
+
+
+func TxHashResult(params json.RawMessage) (interface{}, error) {
 	dec := json.NewDecoder(bytes.NewReader(params))
 
 	if tok, _ := dec.Token(); tok != json.Delim('[') {
 		return nil, errors.New("no [")
 	}
 
-	if !dec.More(){
+	if !dec.More() {
 		return nil, errors.New("data not complete")
 	}
 	var txHash string
 	err := dec.Decode(&txHash)
-	if err != nil{
-		return nil, err
-	}
-	info, err := ledger.FindHashIndex(util.HexToByte(txHash))
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
-	if info == nil{
+	reason, err := ledger.GetWrongIndex(util.HexToByte(txHash))
+	if err != nil {
+		return nil, err
+	}
+
+	if reason != ""{
+		return reason, nil
+	}
+
+	info, err := ledger.FindHashIndex(util.HexToByte(txHash))
+	if err != nil {
+		return nil, err
+	}
+
+	if info != nil {
+		return "txid success", nil
+	}
+
+
+	return "txid not exist", nil
+}
+func TxHash(params json.RawMessage) (interface{}, error) {
+	dec := json.NewDecoder(bytes.NewReader(params))
+
+	if tok, _ := dec.Token(); tok != json.Delim('[') {
+		return nil, errors.New("no [")
+	}
+
+	if !dec.More() {
+		return nil, errors.New("data not complete")
+	}
+	var txHash string
+	err := dec.Decode(&txHash)
+	if err != nil {
+		return nil, err
+	}
+	info, err := ledger.FindHashIndex(util.HexToByte(txHash))
+	if err != nil {
+		return nil, err
+	}
+
+	if info == nil {
 		return nil, nil
 	}
 
 	tx, err := ledger.GetTransaction(info.BlockNum, info.Offset)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
+
+
 	return tx, nil
 }
