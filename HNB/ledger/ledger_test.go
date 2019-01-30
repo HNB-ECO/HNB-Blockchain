@@ -1,14 +1,14 @@
 package ledger
 
-import(
+import (
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	ssComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore/common"
 	"testing"
-	"HNB/ledger/blockStore/common"
-	ssComm "HNB/ledger/stateStore/common"
 )
 
-func Test1(t *testing.T){
+func Test1(t *testing.T) {
 	err := InitLedger()
-	if err != nil{
+	if err != nil {
 		t.Error(err.Error())
 	}
 
@@ -33,12 +33,12 @@ func Test1(t *testing.T){
 	states.SI[1] = state2
 
 	err = WriteLedger(blk, states)
-	if err != nil{
+	if err != nil {
 		t.Error(err.Error())
 	}
 
 	h, err := GetBlockHeight()
-	if err != nil{
+	if err != nil {
 		t.Error(err.Error())
 	}
 
@@ -47,13 +47,11 @@ func Test1(t *testing.T){
 	}
 
 	c, err := GetContractState("c", []byte("second"))
-	if err != nil{
+	if err != nil {
 		t.Error(err.Error())
 	}
-	if string(c) != "second value"{
+	if string(c) != "second value" {
 		t.Error("value invalid")
 	}
-
-
 
 }

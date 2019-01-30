@@ -1,8 +1,8 @@
 package ledger
 
 import (
-	bsComm "HNB/ledger/blockStore/common"
 	"encoding/json"
+	bsComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
 )
 
 type indexStore struct {
@@ -17,9 +17,10 @@ const (
 func SetHashIndex(block *bsComm.Block) error {
 	if block != nil {
 		for i, v := range block.Txs {
-			is := &indexStore{block.BlockNum, uint32(i)}
-			isMar, _ := json.Marshal(is)
+			is := indexStore{block.Header.BlockNum, uint32(i)}
+			isMar, _ := json.Marshal(&is)
 			key := append([]byte(INDEX), v.Txid[:]...)
+			//fmt.Printf("index key:%v\n", key)
 			err := lh.dbHandler.Put(key, isMar)
 			if err != nil {
 				return err
@@ -30,12 +31,16 @@ func SetHashIndex(block *bsComm.Block) error {
 	return nil
 }
 
-func FindHashIndex(txid string) (*indexStore, error) {
+func FindHashIndex(txid []byte) (*indexStore, error) {
 	is := indexStore{}
 	key := append([]byte(INDEX), txid[:]...)
+	//fmt.Printf("query key:%v\n", key)
 	isMar, err := lh.dbHandler.Get(key)
 	if err != nil {
 		return nil, err
+	}
+	if isMar == nil {
+		return nil, nil
 	}
 	err = json.Unmarshal(isMar, &is)
 	if err != nil {

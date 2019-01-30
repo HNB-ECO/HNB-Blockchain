@@ -1,17 +1,19 @@
 package ledger
 
 import (
-	txComm "HNB/common"
-	dbComm "HNB/db/common"
-	"HNB/ledger/blockStore"
-	bsComm "HNB/ledger/blockStore/common"
-	"HNB/ledger/merkle"
-	"HNB/ledger/nonceStore"
-	nnComm "HNB/ledger/nonceStore/common"
-	"HNB/ledger/stateStore"
-	ssComm "HNB/ledger/stateStore/common"
-	"HNB/logging"
 	"errors"
+	txComm "github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore"
+	bsComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/nonceStore"
+	nnComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/nonceStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore"
+	ssComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore/common"
+	wgStore "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/wrongStore"
+	wgComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/wrongStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 )
 
 // 系统数据在本文件中涉及存储，合约数据都在stateStore里面存储
@@ -27,6 +29,7 @@ type ledgerHandler struct {
 	blockHandler bsComm.BlockStore
 	stateHandler ssComm.StateStore
 	nonceHandler nnComm.NonceStore
+	wrongHandler wgComm.WrongIndexStore
 }
 
 var lh *ledgerHandler
@@ -39,6 +42,7 @@ func InitLedger(db dbComm.KVStore, blockDB dbComm.KVStore) error {
 	lh.blockHandler = blockStore.NewBlockStore(blockDB)
 	lh.stateHandler = stateStore.NewStateStore(db)
 	lh.nonceHandler = nonceStore.NewNonceStore(db)
+	lh.wrongHandler = wgStore.NewWrongStore(db)
 
 	return nil
 }
@@ -64,7 +68,7 @@ func WriteLedger(block *bsComm.Block, state *ssComm.StateSet, nonce *nnComm.Nonc
 		return nil
 	}
 
-	if block.BlockNum != h {
+	if block.Header.BlockNum != h {
 		return errors.New("height invalid")
 	}
 
@@ -85,7 +89,7 @@ func WriteLedger(block *bsComm.Block, state *ssComm.StateSet, nonce *nnComm.Nonc
 			}
 		}
 	}
-	err = SetBlockHeight(block.BlockNum + 1)
+	err = SetBlockHeight(block.Header.BlockNum + 1)
 	if err != nil {
 		return err
 	}
@@ -97,6 +101,7 @@ func WriteLedger(block *bsComm.Block, state *ssComm.StateSet, nonce *nnComm.Nonc
 
 	if nonce != nil && nonce.NI != nil {
 		for _, v := range nonce.NI {
+			LedgerLog.Debugf(LOGTABLE_LEDGER, "ledger set nonce addr:%v, nonce:%v", v.Key, v.Nonce)
 			lh.nonceHandler.SetNonce(v.Key, v.Nonce)
 		}
 	}
@@ -159,3 +164,10 @@ func GetTransaction(blkNum uint64, offset uint32) (*txComm.Transaction, error) {
 	return tx, nil
 }
 
+func GetWrongIndex(txid []byte) (string, error) {
+	return lh.wrongHandler.GetWrongIndex(txid)
+}
+
+func SetWrongIndex(txid []byte, reason string) error {
+	return lh.wrongHandler.SetWrongIndex(txid, reason)
+}
