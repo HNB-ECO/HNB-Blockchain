@@ -1,11 +1,11 @@
 package nonceStore
 
 import (
-	cn "HNB/common"
-	dbComm "HNB/db/common"
-	"HNB/ledger/nonceStore/common"
-	"HNB/logging"
 	"encoding/binary"
+	cn "github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/nonceStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 )
 
 type NonceStore struct {
@@ -57,4 +57,3 @@ func (bc *NonceStore) GetNonce(address cn.Address) (uint64, error) {
 
 	return binary.BigEndian.Uint64(nonceByte), nil
 }
-
