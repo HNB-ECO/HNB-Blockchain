@@ -1,4 +1,3 @@
-
 package sw
 
 import (
@@ -12,7 +11,7 @@ import (
 
 	"crypto/elliptic"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 type EcdsaPrivateKey struct {
@@ -44,41 +43,41 @@ func (k *EcdsaPrivateKey) Private() bool {
 }
 
 func (k *EcdsaPrivateKey) PublicKey() (bccsp.Key, error) {
-	return &ecdsaPublicKey{&k.PrivKey.PublicKey}, nil
+	return &EcdsaPublicKey{&k.PrivKey.PublicKey}, nil
 }
 
-type ecdsaPublicKey struct {
-	pubKey *ecdsa.PublicKey
+type EcdsaPublicKey struct {
+	PubKey *ecdsa.PublicKey
 }
 
-func (k *ecdsaPublicKey) Bytes() (raw []byte, err error) {
-	raw, err = x509.MarshalPKIXPublicKey(k.pubKey)
+func (k *EcdsaPublicKey) Bytes() (raw []byte, err error) {
+	raw, err = x509.MarshalPKIXPublicKey(k.PubKey)
 	if err != nil {
 		return nil, fmt.Errorf("Failed marshalling key [%s]", err)
 	}
 	return
 }
 
-func (k *ecdsaPublicKey) SKI() (ski []byte) {
-	if k.pubKey == nil {
+func (k *EcdsaPublicKey) SKI() (ski []byte) {
+	if k.PubKey == nil {
 		return nil
 	}
 
-	raw := elliptic.Marshal(k.pubKey.Curve, k.pubKey.X, k.pubKey.Y)
+	raw := elliptic.Marshal(k.PubKey.Curve, k.PubKey.X, k.PubKey.Y)
 
 	hash := sha256.New()
 	hash.Write(raw)
 	return hash.Sum(nil)
 }
 
-func (k *ecdsaPublicKey) Symmetric() bool {
+func (k *EcdsaPublicKey) Symmetric() bool {
 	return false
 }
 
-func (k *ecdsaPublicKey) Private() bool {
+func (k *EcdsaPublicKey) Private() bool {
 	return false
 }
 
-func (k *ecdsaPublicKey) PublicKey() (bccsp.Key, error) {
+func (k *EcdsaPublicKey) PublicKey() (bccsp.Key, error) {
 	return k, nil
 }

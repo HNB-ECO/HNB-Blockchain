@@ -2,7 +2,6 @@ package rest
 
 import "encoding/json"
 
-
 type JsonrpcMessage struct {
 	Version string          `json:"jsonrpc"`
 	ID      json.RawMessage `json:"id,omitempty"`
@@ -11,8 +10,6 @@ type JsonrpcMessage struct {
 	Error   *jsonError      `json:"error,omitempty"`
 	Result  json.RawMessage `json:"result,omitempty"`
 }
-
-
 
 type jsonSuccessResponse struct {
 	Version string      `json:"jsonrpc"`
@@ -32,10 +29,10 @@ type jsonErrResponse struct {
 	Error   jsonError   `json:"error"`
 }
 
-func SuccessResponse(Version string, Id interface{}, Result interface{}) *jsonSuccessResponse{
+func SuccessResponse(Version string, Id interface{}, Result interface{}) *jsonSuccessResponse {
 	return &jsonSuccessResponse{Version, Id, Result}
 }
 
-func ErrorResponse(Version string, Id interface{}, Code int, Message string) *jsonErrResponse{
+func ErrorResponse(Version string, Id interface{}, Code int, Message string) *jsonErrResponse {
 	return &jsonErrResponse{Version, Id, jsonError{Code, Message, nil}}
 }

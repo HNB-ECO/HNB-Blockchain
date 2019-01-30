@@ -41,4 +41,3 @@ This can be changed later [default is 1]: `)
 	default:
 	}
 }
-

@@ -1,5 +1,3 @@
-
-
 package sw
 
 import (
@@ -11,7 +9,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 func GetRandomBytes(len int) ([]byte, error) {

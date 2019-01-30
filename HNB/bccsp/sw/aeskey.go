@@ -1,4 +1,3 @@
-
 package sw
 
 import (
@@ -6,7 +5,7 @@ import (
 
 	"crypto/sha256"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 type aesPrivateKey struct {

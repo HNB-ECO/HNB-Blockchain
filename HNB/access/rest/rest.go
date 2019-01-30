@@ -3,12 +3,12 @@ package rest
 import (
 	"HNB/config"
 	"HNB/logging"
+	"encoding/json"
+	"fmt"
 	"github.com/gocraft/web"
+	"io/ioutil"
 	"net/http"
 	"strconv"
-	"encoding/json"
-	"io/ioutil"
-	"fmt"
 )
 
 var RestLog logging.LogModule
@@ -64,15 +64,15 @@ func (*serverREST) Process(rw web.ResponseWriter, req *web.Request) {
 		return
 	}
 
-	function,ok := funcList[jm.Method]
-	if !ok{
+	function, ok := funcList[jm.Method]
+	if !ok {
 		retMsg := ErrorResponse(RPCVERSION, jm.ID, 2, "method invalid")
 		encoder.Encode(retMsg)
 		return
 	}
 
 	data, err := function(jm.Params)
-	if err != nil{
+	if err != nil {
 		retMsg := ErrorResponse(RPCVERSION, jm.ID, 3, err.Error())
 		encoder.Encode(retMsg)
 		return
@@ -82,8 +82,7 @@ func (*serverREST) Process(rw web.ResponseWriter, req *web.Request) {
 	encoder.Encode(retMsg)
 }
 
-
-var funcList = map[string] func(params json.RawMessage) (interface{}, error){
+var funcList = map[string]func(params json.RawMessage) (interface{}, error){
 	"blockNumber":        HighestBlockNum,
 	"getBlockByNumber":   Block,
 	"getBlockByHash":     TxHash,
@@ -91,6 +90,8 @@ var funcList = map[string] func(params json.RawMessage) (interface{}, error){
 	"getTxPool":          GetTxPoolQueue,
 	"getBalance":         QueryBalanceMsg,
 	"sendRawTransaction": SendTxMsg,
+	"getNonce":           GetNonce,
+	"getResultByHash":    TxHashResult,
 }
 
 func StartRESTServer() {
@@ -101,7 +102,6 @@ func StartRESTServer() {
 	RestLog.Info(LOGTABLE_REST, "rest start port: "+port)
 
 	//函数注册
-
 
 	go func() {
 		http.ListenAndServe(":"+port, router)

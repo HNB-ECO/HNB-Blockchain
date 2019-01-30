@@ -1,11 +1,9 @@
-
-
 package sw
 
 import (
 	"hash"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 type hasher struct {

@@ -1,14 +1,17 @@
 package cli
 
 import (
+	"HNB/access/rest"
+	appComm "HNB/appMgr/common"
 	"HNB/bccsp"
 	"HNB/bccsp/secp256k1"
 	"HNB/bccsp/sw"
 	"HNB/common"
+	"HNB/consensus/dbft"
 	"HNB/contract/hgs"
 	"HNB/contract/hnb"
 	"HNB/msp"
-	"HNB/txpool"
+	"HNB/rlp"
 	"HNB/util"
 	"bytes"
 	"crypto/ecdsa"
@@ -19,9 +22,6 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net/http"
-	"HNB/consensus/dbft"
-	"HNB/access/rest"
-	"HNB/rlp"
 )
 
 var (
@@ -96,31 +96,30 @@ var (
 		Value: 0,
 		Usage: "nonce",
 	}
-
 )
 
 var (
 	CliSendVoteMsg = cli.StringFlag{
-		Name:	"send vote msg",
-		Value:	"vote",
-		Usage:	"send vote tx to vote for one node",
+		Name:  "send vote msg",
+		Value: "vote",
+		Usage: "send vote tx to vote for one node",
 	}
 
 	CliCandidate = cli.StringFlag{
-		Name:  	"candidate",
-		Value: 	"",
-		Usage: 	"candidate node",
+		Name:  "candidate",
+		Value: "",
+		Usage: "candidate node",
 	}
 
 	CliVotingPower = cli.Int64Flag{
-		Name:	"votingPower",
-		Value:	0,
-		Usage:	"node vote power",
+		Name:  "votingPower",
+		Value: 0,
+		Usage: "node vote power",
 	}
 	CliVoteEpochNo = cli.Uint64Flag{
-		Name:	"voteEpochNo",
-		Value:	0,
-		Usage:	"voteEpochNo",
+		Name:  "voteEpochNo",
+		Value: 0,
+		Usage: "voteEpochNo",
 	}
 )
 
@@ -178,10 +177,10 @@ var SendTx = cli.Command{
 }
 
 var SendVoteTx = cli.Command{
-	Name:	"sendvotemsg",
-	Usage:	"send vote tx to vote for one node",
-	Action:	SendVoteMsg,
-	Flags:	[]cli.Flag{
+	Name:   "sendvotemsg",
+	Usage:  "send vote tx to vote for one node",
+	Action: SendVoteMsg,
+	Flags: []cli.Flag{
 		//CliFromAddr,
 		//CliFromChainID,
 		CliRest,
@@ -218,8 +217,6 @@ func loadKey(path string) (bccsp.Key, error) {
 	return kp.PubKey, nil
 }
 
-
-
 func SendMsg(ctx *cli.Context) {
 	port := ctx.String(CliRest.Name)
 	fmt.Println("port:" + port)
@@ -241,7 +238,7 @@ func SendMsg(ctx *cli.Context) {
 	}
 
 	var payload []byte
-	if chainID == txpool.HNB {
+	if chainID == appComm.HNB {
 		ht := &hnb.HnbTx{}
 		if isSame == true {
 			ht.TxType = hnb.SAME
@@ -259,7 +256,7 @@ func SendMsg(ctx *cli.Context) {
 			ht.PayLoad, _ = json.Marshal(df)
 			payload, _ = json.Marshal(ht)
 		}
-	} else if chainID == txpool.HGS {
+	} else if chainID == appComm.HGS {
 		ht := &hgs.HgsTx{}
 		if isSame == true {
 			ht.TxType = hgs.SAME
@@ -308,14 +305,14 @@ func SendMsg(ctx *cli.Context) {
 		return
 	}
 
-	mt,_ := rlp.EncodeToBytes(msgTxWithSign)
+	mt, _ := rlp.EncodeToBytes(msgTxWithSign)
 	url := "http://" + "127.0.0.1:" + port + "/"
-	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm := &rest.JsonrpcMessage{Version: "1.0"}
 	jm.Method = "sendRawTransaction"
 	var params []interface{}
 	params = append(params, util.ToHex(mt))
-	jm.Params,_ = json.Marshal(params)
-	jmm,_ := json.Marshal(jm)
+	jm.Params, _ = json.Marshal(params)
+	jmm, _ := json.Marshal(jm)
 
 	if url != "" {
 		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
@@ -352,12 +349,12 @@ func QueryBalance(ctx *cli.Context) {
 	}
 	fmt.Println("addr:", addr)
 	url = "http://" + "127.0.0.1:" + port + "/"
-	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm := &rest.JsonrpcMessage{Version: "1.0"}
 	jm.Method = "getBalance"
 	var params []interface{}
 	params = append(params, chainID, addr)
-	jm.Params,_ = json.Marshal(params)
-	jmm,_ := json.Marshal(jm)
+	jm.Params, _ = json.Marshal(params)
+	jmm, _ := json.Marshal(jm)
 	if url != "" {
 		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
 
@@ -373,7 +370,7 @@ func QueryBalance(ctx *cli.Context) {
 	}
 }
 
-func SendVoteMsg(ctx *cli.Context)  {
+func SendVoteMsg(ctx *cli.Context) {
 	port := ctx.String(CliRest.Name)
 	fmt.Println("port:" + port)
 
@@ -382,11 +379,10 @@ func SendVoteMsg(ctx *cli.Context)  {
 	nonce := ctx.Int64(CliNonce.Name)
 	path := ctx.String(CliKeyPath.Name)
 	key, err := loadKey(path)
-	if err != nil{
+	if err != nil {
 		fmt.Println("load key ", err.Error())
 	}
 	address := msp.AccountPubkeyToAddress1(key)
-
 
 	votePower := ctx.Int64(CliVotingPower.Name)
 	epochNo := ctx.Uint64(CliVoteEpochNo.Name)
@@ -404,30 +400,28 @@ func SendVoteMsg(ctx *cli.Context)  {
 	}
 	voteMsg.VoteEpoch = epochNo
 
-	ht.PayLoad,_ = json.Marshal(voteMsg)
-	payload,_ = json.Marshal(ht)
+	ht.PayLoad, _ = json.Marshal(voteMsg)
+	payload, _ = json.Marshal(ht)
 
 	msgTx := common.Transaction{}
 	msgTx.Payload = payload
 	msgTx.From = address
-	msgTx.ContractName = txpool.HNB
+	msgTx.ContractName = appComm.HNB
 	msgTx.NonceValue = uint64(nonce)
 	signer := msp.GetSigner()
 	msgTx.Txid = signer.Hash(&msgTx)
 
 	err = msp.NewKeyPair().Init(path)
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
 
 	msgTxWithSign, err := msp.SignTx(&msgTx, signer)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
 
 	//f,err := msp.Sender(signer, &msgTx)
 	//if err != nil{
@@ -437,17 +431,15 @@ func SendVoteMsg(ctx *cli.Context)  {
 	//fmt.Printf("msg %v %v\n",
 	//	util.ByteToHex(address.GetBytes()), util.ByteToHex(f.GetBytes()))
 
-
-
-	mt,_ := rlp.EncodeToBytes(msgTxWithSign)
+	mt, _ := rlp.EncodeToBytes(msgTxWithSign)
 
 	url := "http://" + "127.0.0.1:" + port + "/"
-	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm := &rest.JsonrpcMessage{Version: "1.0"}
 	jm.Method = "sendRawTransaction"
 	var params []interface{}
 	params = append(params, util.ToHex(mt))
-	jm.Params,_ = json.Marshal(params)
-	jmm,_ := json.Marshal(jm)
+	jm.Params, _ = json.Marshal(params)
+	jmm, _ := json.Marshal(jm)
 
 	if url != "" {
 		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
@@ -463,4 +455,3 @@ func SendVoteMsg(ctx *cli.Context)  {
 		response.Body.Close()
 	}
 }
-

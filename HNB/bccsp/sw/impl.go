@@ -1,4 +1,3 @@
-
 package sw
 
 import (
@@ -16,13 +15,11 @@ import (
 
 var (
 	logger logging.LogModule
-
 )
 
 func init() {
 	logger = logging.GetLogIns()
 }
-
 
 const LOGTABLE_BCCSP string = "bccsp"
 
@@ -59,8 +56,13 @@ func New(securityLevel int, hashFamily string, keyStore bccsp.KeyStore) (bccsp.B
 	signers := make(map[reflect.Type]Signer)
 	signers[reflect.TypeOf(&EcdsaPrivateKey{})] = &ecdsaSigner{}
 	signers[reflect.TypeOf(&rsaPrivateKey{})] = &rsaSigner{}
+	signers[reflect.TypeOf(&Ecdsa256K1PrivateKey{})] = &ecdsa256K1Signer{}
 
 	verifiers := make(map[reflect.Type]Verifier)
+
+	verifiers[reflect.TypeOf(&Ecdsa256K1PublicKey{})] = &ecdsaPublicKey256K1Verifier{}
+	verifiers[reflect.TypeOf(&Ecdsa256K1PrivateKey{})] = &ecdsaPrivKey256K1Verifier{}
+
 	verifiers[reflect.TypeOf(&EcdsaPrivateKey{})] = &ecdsaPrivateKeyVerifier{}
 	verifiers[reflect.TypeOf(&EcdsaPublicKey{})] = &ecdsaPublicKeyKeyVerifier{}
 	verifiers[reflect.TypeOf(&rsaPrivateKey{})] = &rsaPrivateKeyVerifier{}
@@ -83,6 +85,8 @@ func New(securityLevel int, hashFamily string, keyStore bccsp.KeyStore) (bccsp.B
 		hashers:    hashers}
 
 	keyGenerators := make(map[reflect.Type]KeyGenerator)
+
+	keyGenerators[reflect.TypeOf(&bccsp.ECDSAP256K1KeyGenOpts{})] = &ecdsa256K1KeyGenerator{}
 	keyGenerators[reflect.TypeOf(&bccsp.ECDSAKeyGenOpts{})] = &ecdsaKeyGenerator{curve: conf.ellipticCurve}
 	keyGenerators[reflect.TypeOf(&bccsp.ECDSAP256KeyGenOpts{})] = &ecdsaKeyGenerator{curve: elliptic.P256()}
 	keyGenerators[reflect.TypeOf(&bccsp.ECDSAP384KeyGenOpts{})] = &ecdsaKeyGenerator{curve: elliptic.P384()}
@@ -104,6 +108,7 @@ func New(securityLevel int, hashFamily string, keyStore bccsp.KeyStore) (bccsp.B
 	impl.keyDerivers = keyDerivers
 
 	keyImporters := make(map[reflect.Type]KeyImporter)
+
 	keyImporters[reflect.TypeOf(&bccsp.AES256ImportKeyOpts{})] = &aes256ImportKeyOptsKeyImporter{}
 	keyImporters[reflect.TypeOf(&bccsp.HMACImportKeyOpts{})] = &hmacImportKeyOptsKeyImporter{}
 	keyImporters[reflect.TypeOf(&bccsp.ECDSAPKIXPublicKeyImportOpts{})] = &ecdsaPKIXPublicKeyImportOptsKeyImporter{}
@@ -111,6 +116,7 @@ func New(securityLevel int, hashFamily string, keyStore bccsp.KeyStore) (bccsp.B
 	keyImporters[reflect.TypeOf(&bccsp.ECDSAGoPublicKeyImportOpts{})] = &ecdsaGoPublicKeyImportOptsKeyImporter{}
 	keyImporters[reflect.TypeOf(&bccsp.RSAGoPublicKeyImportOpts{})] = &rsaGoPublicKeyImportOptsKeyImporter{}
 	keyImporters[reflect.TypeOf(&bccsp.X509PublicKeyImportOpts{})] = &x509PublicKeyImportOptsKeyImporter{bccsp: impl}
+	keyImporters[reflect.TypeOf(&bccsp.ECDSAPrivateKey256K1ImportOpts{})] = &ecdsaPrivateKey256K1ImportOptsKeyImporter{}
 
 	impl.keyImporters = keyImporters
 
@@ -174,7 +180,6 @@ func (csp *impl) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (dk bccsp.Key, e
 	if err != nil {
 		return nil, errors.ErrorWithCallstack(errors.BCCSP, errors.Internal, "Failed deriving key with opts [%v]", opts).WrapError(err)
 	}
-
 
 	if !opts.Ephemeral() {
 		err = csp.ks.StoreKey(k)
@@ -260,7 +265,6 @@ func (csp *impl) GetHash(opts bccsp.HashOpts) (h hash.Hash, err error) {
 
 	return
 }
-
 
 func (csp *impl) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) {
 	if k == nil {

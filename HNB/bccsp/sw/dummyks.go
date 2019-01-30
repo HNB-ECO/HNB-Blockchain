@@ -1,12 +1,10 @@
-
 package sw
 
 import (
 	"errors"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
-
 
 func NewDummyKeyStore() bccsp.KeyStore {
 	return &dummyKeyStore{}

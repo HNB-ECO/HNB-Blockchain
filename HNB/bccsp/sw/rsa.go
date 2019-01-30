@@ -1,5 +1,3 @@
-
-
 package sw
 
 import (
@@ -8,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 type rsaSigner struct{}

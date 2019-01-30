@@ -1,4 +1,3 @@
-
 package sw
 
 import (

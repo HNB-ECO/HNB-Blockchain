@@ -2,16 +2,16 @@ package appMgr
 
 import (
 	appComm "HNB/appMgr/common"
+	"HNB/common"
 	"HNB/contract/hgs"
 	"HNB/contract/hnb"
 	dbComm "HNB/db/common"
 	"HNB/ledger"
-	"HNB/ledger/blockStore/common"
+	bsComm "HNB/ledger/blockStore/common"
 	nnComm "HNB/ledger/nonceStore/common"
 	ssComm "HNB/ledger/stateStore/common"
 	"HNB/logging"
 	"HNB/msp"
-	"HNB/txpool"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -57,7 +57,7 @@ func InitAppMgr(db dbComm.KVStore) error {
 
 	for iter.Next() {
 		appMgrLog.Infof(LOGTABLE_APPMGR, "installed contract %v", string(iter.Key()))
-		if bytes.Compare(iter.Key(), []byte("contract#"+txpool.HGS)) == 0 {
+		if bytes.Compare(iter.Key(), []byte("contract#"+appComm.HGS)) == 0 {
 			hgsInstalled = true
 		}
 	}
@@ -66,7 +66,7 @@ func InitAppMgr(db dbComm.KVStore) error {
 
 	if hgsInstalled == false {
 		//安装智能合约
-		apiInf := GetContractApi(txpool.HGS)
+		apiInf := GetContractApi(appComm.HGS)
 		err := hgs.InstallContract(apiInf)
 		if err != nil {
 			return err
@@ -74,12 +74,12 @@ func InitAppMgr(db dbComm.KVStore) error {
 		s := &ssComm.StateSet{}
 		s.SI = apiInf.GetAllState()
 		ledger.SetContractState(s)
-		db.Put([]byte("contract#"+txpool.HGS), []byte("active"))
+		db.Put([]byte("contract#"+appComm.HGS), []byte("active"))
 	}
 
-	am.setHandler(txpool.HGS, hgsHandler)
+	am.setHandler(appComm.HGS, hgsHandler)
 	//智能合约启动初始化
-	err := initApp(txpool.HGS)
+	err := initApp(appComm.HGS)
 	if err != nil {
 		appMgrLog.Info(LOGTABLE_APPMGR, "init hgs app err:"+err.Error())
 	} else {
@@ -90,7 +90,7 @@ func InitAppMgr(db dbComm.KVStore) error {
 
 	if hnbInstalled == false {
 		//安装智能合约
-		apiInf := GetContractApi(txpool.HNB)
+		apiInf := GetContractApi(appComm.HNB)
 		err := hnb.InstallContract(apiInf)
 		if err != nil {
 			return err
@@ -98,12 +98,12 @@ func InitAppMgr(db dbComm.KVStore) error {
 		s := &ssComm.StateSet{}
 		s.SI = apiInf.GetAllState()
 		ledger.SetContractState(s)
-		db.Put([]byte("contract#"+txpool.HNB), []byte("active"))
+		db.Put([]byte("contract#"+appComm.HNB), []byte("active"))
 	}
 
-	am.setHandler(txpool.HNB, hnbHandler)
+	am.setHandler(appComm.HNB, hnbHandler)
 	//智能合约启动初始化
-	err = initApp(txpool.HNB)
+	err = initApp(appComm.HNB)
 	if err != nil {
 		appMgrLog.Info(LOGTABLE_APPMGR, "init hnb app err:"+err.Error())
 	} else {
@@ -123,7 +123,23 @@ func Query(chainID string, args []byte) ([]byte, error) {
 	return h.Query(apiInf)
 }
 
-func BlockProcess(blk *common.Block) error {
+func CheckTx(tx *common.Transaction) error {
+	handler, err := am.getHandler(tx.ContractName)
+	if err != nil {
+		return err
+	}
+
+	if handler == nil {
+		return errors.New("app not exist")
+	}
+	apiInf := GetContractApi(tx.ContractName)
+	apiInf.SetArgs(tx.Payload)
+	apiInf.SetFrom(tx.FromAddress())
+
+	return handler.CheckTx(apiInf)
+}
+
+func BlockProcess(blk *bsComm.Block) error {
 	if blk == nil {
 		return errors.New("blk = nil")
 	}
@@ -150,7 +166,8 @@ func BlockProcess(blk *common.Block) error {
 		snapshot := h.GetSnapshot()
 		err = handler.Invoke(h)
 		if err != nil {
-			//TODO 添加事件通知
+			//TODO 添加事件通知 将错误事件记录到异常表
+			ledger.SetWrongIndex(tx.Txid[:],err.Error())
 			//return err
 			appMgrLog.Info(LOGTABLE_APPMGR, "hnb err:"+err.Error())
 			h.SnapshotRestore(snapshot)
@@ -174,7 +191,7 @@ func BlockProcess(blk *common.Block) error {
 }
 
 func UnfreezeToken(epochNo uint64) error {
-	handler, err := am.getHandler(txpool.HNB)
+	handler, err := am.getHandler(appComm.HNB)
 	if err != nil {
 		return err
 	}
@@ -183,7 +200,7 @@ func UnfreezeToken(epochNo uint64) error {
 		return errors.New("chainID not exist")
 	}
 
-	h := GetContractApi(txpool.HNB)
+	h := GetContractApi(appComm.HNB)
 	opochNoS := strconv.FormatUint(epochNo, 10)
 
 	hb := &hnb.HnbTx{}
@@ -213,8 +230,8 @@ type QryHnbTx struct {
 }
 
 func GetVoteSum(epochNo uint64) (int64, error) {
-	h, _ := am.getHandler(txpool.HNB)
-	apiInf := GetContractApi(txpool.HNB)
+	h, _ := am.getHandler(appComm.HNB)
+	apiInf := GetContractApi(appComm.HNB)
 	opochNoS := strconv.FormatUint(epochNo, 10)
 	qht := &QryHnbTx{}
 	qht.TxType = hnb.VOTESUM
@@ -237,8 +254,8 @@ func GetVoteSum(epochNo uint64) (int64, error) {
 }
 
 func GetVotePeerIDOrderToken(epochNo uint64) ([][]byte, error) {
-	h, _ := am.getHandler(txpool.HNB)
-	apiInf := GetContractApi(txpool.HNB)
+	h, _ := am.getHandler(appComm.HNB)
+	apiInf := GetContractApi(appComm.HNB)
 
 	opochNoS := strconv.FormatUint(epochNo, 10)
 	qht := &QryHnbTx{}
@@ -282,4 +299,3 @@ func (am *appManager) getHandler(chainID string) (appComm.ContractInf, error) {
 
 	return handler, nil
 }
-

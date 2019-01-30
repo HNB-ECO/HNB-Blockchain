@@ -1,12 +1,9 @@
-
 package utils
 
 import (
 	"github.com/urfave/cli"
 	"strings"
 )
-
-
 
 var (
 	TypeFlag = cli.StringFlag{

@@ -1,5 +1,3 @@
-
-
 package sw
 
 import (
@@ -9,7 +7,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 type ecdsaKeyGenerator struct {

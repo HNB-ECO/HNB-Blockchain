@@ -1,4 +1,3 @@
-
 package errors
 
 import (
@@ -7,6 +6,7 @@ import (
 	"regexp"
 	"runtime"
 )
+
 const MaxCallStackLength = 30
 
 var (

@@ -4,6 +4,7 @@ import (
 	myrpc "HNB/access/grpc"
 	"HNB/access/rest"
 	"HNB/appMgr"
+	appComm "HNB/appMgr/common"
 	"HNB/config"
 	"HNB/consensus"
 	"HNB/db"
@@ -145,7 +146,7 @@ func Start(ctx *cli.Context) {
 	tp.NewTXPoolServer().Start()
 
 	//consensus.NewConsensusServer(consensus.ALGORAND, tp.HNB).Start()
-	consensus.NewConsensusServer(consensus.DPoS, tp.HNB).Start()
+	consensus.NewConsensusServer(consensus.DPoS, appComm.HNB).Start()
 
 	if config.Config.RestPort != uint16(0) {
 		rest.StartRESTServer()
@@ -160,4 +161,3 @@ func Start(ctx *cli.Context) {
 		time.Sleep(time.Hour)
 	}
 }
-

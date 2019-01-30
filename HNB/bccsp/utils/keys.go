@@ -1,4 +1,3 @@
-
 package utils
 
 import (
@@ -71,7 +70,6 @@ func PrivateKeyToPEM(privateKey interface{}, pwd []byte) ([]byte, error) {
 		if k == nil {
 			return nil, errors.New("Invalid ecdsa private key. It must be different from nil.")
 		}
-
 
 		oidNamedCurve, ok := oidFromNamedCurve(k.Curve)
 		if !ok {

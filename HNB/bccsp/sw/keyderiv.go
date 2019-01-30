@@ -1,5 +1,3 @@
-
-
 package sw
 
 import (
@@ -11,7 +9,7 @@ import (
 
 	"crypto/hmac"
 
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"HNB/bccsp"
 )
 
 type ecdsaPublicKeyKeyDeriver struct{}
@@ -86,7 +84,6 @@ func (kd *ecdsaPrivateKeyKeyDeriver) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOp
 
 		tempSK.D.Add(ecdsaK.PrivKey.D, k)
 		tempSK.D.Mod(tempSK.D, ecdsaK.PrivKey.PublicKey.Params().N)
-
 
 		tempX, tempY := ecdsaK.PrivKey.PublicKey.ScalarBaseMult(k.Bytes())
 		tempSK.PublicKey.X, tempSK.PublicKey.Y =

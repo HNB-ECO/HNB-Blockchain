@@ -4,12 +4,18 @@ import (
 	"HNB/common"
 )
 
+const (
+	HGS string = "hgs"
+	HNB string = "hnb"
+)
+
 type ContractInf interface {
 	//	InstallContract(ContractApi) error
 
 	Init() error
 	Invoke(ContractApi) error
 	Query(ContractApi) ([]byte, error)
+	CheckTx(ContractApi) error
 }
 
 type ContractApi interface {
