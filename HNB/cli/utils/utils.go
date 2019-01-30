@@ -56,4 +56,3 @@ func FormatOnt(amount uint64) string {
 func ParseOnt(rawAmount string) uint64 {
 	return ParseAssetAmount(rawAmount, PRECISION_ONT)
 }
-

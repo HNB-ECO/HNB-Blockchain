@@ -79,4 +79,3 @@ func checkScheme(ctx *cli.Context, reader *bufio.Reader) string {
 
 	return sch
 }
-

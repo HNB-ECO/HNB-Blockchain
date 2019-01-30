@@ -1,13 +1,13 @@
 package cli
 
 import (
+	"HNB/access/rest"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"net/http"
-	"bytes"
-	"HNB/access/rest"
-	"encoding/json"
 )
 
 var (
@@ -38,10 +38,10 @@ func ReadHeight(ctx *cli.Context) error {
 
 	port := ctx.String(CliRest.Name)
 	url := "http://" + "127.0.0.1:" + port + "/"
-	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm := &rest.JsonrpcMessage{Version: "1.0"}
 	jm.Method = "blockNumber"
-	jm.ID,_ = json.Marshal(1)
-	jmm,_ := json.Marshal(jm)
+	jm.ID, _ = json.Marshal(1)
+	jmm, _ := json.Marshal(jm)
 	if url != "" {
 		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
 
@@ -68,18 +68,17 @@ var ReadBlkByNum = cli.Command{
 	},
 }
 
-
 func ReadBlkNum(ctx *cli.Context) error {
 
 	blkNum := ctx.String(CliBlkNum.Name)
 	port := ctx.String(CliRest.Name)
 	url := "http://" + "127.0.0.1:" + port + "/"
-	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm := &rest.JsonrpcMessage{Version: "1.0"}
 	jm.Method = "getBlockByNumber"
 	var params []interface{}
 	params = append(params, blkNum)
-	jm.Params,_ = json.Marshal(params)
-	jmm,_ := json.Marshal(jm)
+	jm.Params, _ = json.Marshal(params)
+	jmm, _ := json.Marshal(jm)
 	if url != "" {
 		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
 
@@ -112,12 +111,12 @@ func QueryTxHash(ctx *cli.Context) error {
 	port := ctx.String(CliRest.Name)
 
 	url := "http://" + "127.0.0.1:" + port + "/"
-	jm := &rest.JsonrpcMessage{Version:"1.0"}
+	jm := &rest.JsonrpcMessage{Version: "1.0"}
 	jm.Method = "getBlockByHash"
 	var params []interface{}
 	params = append(params, hash)
-	jm.Params,_ = json.Marshal(params)
-	jmm,_ := json.Marshal(jm)
+	jm.Params, _ = json.Marshal(params)
+	jmm, _ := json.Marshal(jm)
 
 	if url != "" {
 		response, err := http.Post(url, "application/json", bytes.NewReader(jmm))
@@ -135,4 +134,3 @@ func QueryTxHash(ctx *cli.Context) error {
 
 	return nil
 }
-
