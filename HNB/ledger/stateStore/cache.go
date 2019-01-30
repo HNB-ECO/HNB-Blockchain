@@ -1,13 +1,13 @@
 package stateStore
 
 import (
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"github.com/bluele/gcache"
-	"HNB/logging"
 )
 
-
 var StateLog logging.LogModule
-const(
+
+const (
 	LOGTABLE_STATE string = "state"
 )
 
@@ -30,7 +30,7 @@ func NewStateCache() *StateCache {
 func (this *StateCache) GetState(key []byte) []byte {
 
 	state, ok := this.cache.Get(string(key))
-	if ok != nil{
+	if ok != nil {
 		return nil
 	}
 	StateLog.Debugf(LOGTABLE_STATE, "get state cache key:%v value:%v", string(key), string(state.([]byte)))
@@ -46,4 +46,3 @@ func (this *StateCache) DeleteState(key []byte) {
 	StateLog.Debugf(LOGTABLE_STATE, "remove state cache key:%v", string(key))
 	this.cache.Remove(string(key))
 }
-
