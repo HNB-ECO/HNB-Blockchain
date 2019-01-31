@@ -1,22 +1,16 @@
 package merkle
 
 import (
-	"testing"
-	"fmt"
 	"encoding/hex"
-	"crypto/sha256"
-	"strings"
+	"fmt"
+	"testing"
 )
-
 
 func TestMerkleRoot(t *testing.T) {
 	a := make([]BYTE, 0)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 9; i++ {
 		tmp := fmt.Sprintf("%d", i)
-		hash := sha256.New()
-		hash.Write([]byte(tmp))
-		temp1 := hash.Sum(nil)
-		a = append(a, BYTE(temp1))
+		a = append(a, BYTE(tmp))
 	}
 	b := ComputeMerkleRoot(a)
 	if b == nil {
@@ -33,8 +27,7 @@ func ComputeMerkleRoot(hashes []BYTE) *merkleTree {
 	return tree
 }
 
-
-func printMerkle(mt *merkleTreeNode, level uint)  {
+func printMerkle(mt *merkleTreeNode, level uint) {
 	//if mt == nil {
 	//	fmt.Println("level", level)
 	//	return
@@ -43,8 +36,7 @@ func printMerkle(mt *merkleTreeNode, level uint)  {
 		fmt.Println("level", level, hex.EncodeToString(mt.Hash))
 		return
 	}
-	lala := strings.Repeat(" ", int(level*2))
-	fmt.Println(lala, "level", level, hex.EncodeToString(mt.Hash))
+	fmt.Println("level", level, hex.EncodeToString(mt.Hash))
 	printMerkle(mt.Left, level-1)
 	printMerkle(mt.Right, level-1)
 }

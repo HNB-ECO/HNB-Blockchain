@@ -16,4 +16,3 @@ func TestGetAccountPassword(t *testing.T) {
 	assert.Nil(t, password)
 	assert.NotNil(t, err)
 }
-

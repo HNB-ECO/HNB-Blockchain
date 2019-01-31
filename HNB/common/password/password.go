@@ -58,4 +58,3 @@ func GetAccountPassword() ([]byte, error) {
 
 	return passwd, nil
 }
-

@@ -1,21 +1,28 @@
+// This is a duplicated and slightly modified version of "gopkg.in/karalabe/cookiejar.v2/collections/prque".
+
 package prque
 
 import (
 	"container/heap"
 )
 
+// Priority queue data structure.
 type Prque struct {
 	cont *sstack
 }
 
+// Creates a new priority queue.
 func New(setIndex setIndexCallback) *Prque {
 	return &Prque{newSstack(setIndex)}
 }
 
+// Pushes a value with a given priority into the queue, expanding if necessary.
 func (p *Prque) Push(data interface{}, priority int64) {
 	heap.Push(p.cont, &item{data, priority})
 }
 
+// Pops the value with the greates priority off the stack and returns it.
+// Currently no shrinking is done.
 func (p *Prque) Pop() (interface{}, int64) {
 	item := heap.Pop(p.cont).(*item)
 	return item.value, item.priority

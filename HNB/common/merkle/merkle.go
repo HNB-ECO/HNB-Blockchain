@@ -1,10 +1,12 @@
-package  merkle
+package merkle
 
 import (
 	"bytes"
 	"crypto/sha256"
 	"errors"
+	//"fmt"
 )
+
 type BYTE []byte
 
 func doubleSha256(s []BYTE) BYTE {
@@ -35,6 +37,7 @@ func (t *merkleTreeNode) IsLeaf() bool {
 	return t.Left == nil && t.Right == nil
 }
 
+//use []BYTE to create a new merkleTree
 func newMerkleTree(hashes []BYTE) (*merkleTree, error) {
 	if len(hashes) == 0 {
 		return nil, errors.New("NewMerkleTree input no item error.")
@@ -47,6 +50,7 @@ func newMerkleTree(hashes []BYTE) (*merkleTree, error) {
 		nodes = levelUp(nodes)
 		height += 1
 	}
+	//fmt.Printf("the node len is %d\n", len(nodes))
 	mt := &merkleTree{
 		Root:  nodes[0],
 		Depth: height,
@@ -55,6 +59,7 @@ func newMerkleTree(hashes []BYTE) (*merkleTree, error) {
 
 }
 
+//Generate the leaves nodes
 func generateLeaves(hashes []BYTE) []*merkleTreeNode {
 	var leaves []*merkleTreeNode
 	for _, d := range hashes {
@@ -66,6 +71,7 @@ func generateLeaves(hashes []BYTE) []*merkleTreeNode {
 	return leaves
 }
 
+//calc the next level's hash use double sha256
 func levelUp(nodes []*merkleTreeNode) []*merkleTreeNode {
 	var nextLevel []*merkleTreeNode
 	for i := 0; i < len(nodes)/2; i++ {
@@ -94,6 +100,3 @@ func levelUp(nodes []*merkleTreeNode) []*merkleTreeNode {
 	}
 	return nextLevel
 }
-
-
-
