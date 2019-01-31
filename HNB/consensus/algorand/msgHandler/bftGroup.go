@@ -1,17 +1,21 @@
 package msgHandler
 
 import (
-	"bytes"
-	"HNB/consensus/algorand/common"
 	"HNB/consensus/algorand/types"
+	"HNB/util"
+	"bytes"
 )
 
 type BftGroup struct {
 	BgID uint64
+	// VRF
+	VRFValue []byte
+	VRFProof []byte
+
 	Validators []*types.Validator
 }
 
-func (bg BftGroup) Exist(digestAddr common.HexBytes) bool {
+func (bg BftGroup) Exist(digestAddr util.HexBytes) bool {
 	if len(digestAddr) == 0 {
 		return false
 	}

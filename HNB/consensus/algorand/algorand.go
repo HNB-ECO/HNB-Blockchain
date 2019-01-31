@@ -1,51 +1,53 @@
 package algorand
 
 import (
-	bsComm "HNB/ledger/blockStore/common"
-	"HNB/consensus/algorand/state"
-	"HNB/consensus/algorand/msgHandler"
-	"HNB/consensus/algorand/types"
-	"HNB/msp"
+	appComm "HNB/appMgr/common"
 	"HNB/common"
-	"HNB/ledger"
-	"HNB/logging"
 	"HNB/config"
-	"HNB/txpool"
-
-	"time"
+	"HNB/consensus/algorand/msgHandler"
+	"HNB/consensus/algorand/state"
+	"HNB/consensus/algorand/types"
+	"HNB/ledger"
+	bsComm "HNB/ledger/blockStore/common"
+	"HNB/logging"
+	"HNB/msp"
 	"fmt"
-	"crypto/sha256"
+	"sort"
+	"time"
 )
 
 var ConsLog logging.LogModule
-const(
+
+const (
 	LOGTABLE_CONS string = "consensus"
 )
 
+const GENE_BFTGROUP = "geneBftGroup"
+const GENE_BFTGROUP_NUM = "bgID"
+
 type Core struct {
-	BftMgr      *msgHandler.BftMgr
+	BftMgr *msgHandler.BftMgr
 }
 
 type Server struct {
 	*Core
 }
-func NewAlgorandServer() *Server{
-	c,_ := NewCore()
+
+func NewAlgorandServer() *Server {
+	c, _ := NewCore()
 	return &Server{c}
 }
 
-
-func (s *Server)Start(){
+func (s *Server) Start() {
 	err := s.Core.InitCons()
-	if err != nil{
+	if err != nil {
 		panic(err.Error())
 	}
 }
 
-func (s *Server)Stop(){
+func (s *Server) Stop() {
 
 }
-
 
 func NewCore() (*Core, error) {
 	ConsLog = logging.GetLogIns()
@@ -66,12 +68,14 @@ func (cons *Core) InitCons() error {
 		return err
 	}
 
-
 	bftMgr, err := msgHandler.NewBftMgr(*lastCommitState)
 	if err != nil {
 		panic("333" + err.Error())
 		return err
 	}
+	handler.RegisterIsProposerFunc(isProposerByVrf)
+	handler.RegisterGeneProposalBlkFunc(geneProposalBlkByVrf)
+	handler.RegisterValidateProposalBlkFunc(validateProposalBlkByVrf)
 
 	bftMgr.MsgHandler = handler
 	cons.BftMgr = bftMgr
@@ -97,8 +101,7 @@ func (cons *Core) Init() (*state.State, error) {
 			return nil, err
 		}
 
-		err = ledger.WriteLedger(blk0, nil)
-		//err = appMgr.BlockProcess(blk0)
+		err = ledger.WriteLedger(blk0, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -118,6 +121,7 @@ func (cons *Core) Init() (*state.State, error) {
 		if blk == nil {
 			return nil, fmt.Errorf("(tdmInit) blk %d is nil", curH-1)
 		}
+
 		lastCommitState, err := cons.LoadLastCommitStateFromBlk(blk)
 		if err != nil {
 			ConsLog.Errorf(LOGTABLE_CONS, "get last commit state err:%v", err.Error())
@@ -133,6 +137,7 @@ func (cons *Core) LoadLastCommitStateFromBlk(block *bsComm.Block) (*state.State,
 	if err != nil {
 		return nil, err
 	}
+
 	curValidators, err := cons.LoadValidators(block)
 	if err != nil {
 		return nil, err
@@ -141,11 +146,11 @@ func (cons *Core) LoadLastCommitStateFromBlk(block *bsComm.Block) (*state.State,
 	var lastValidators *types.ValidatorSet
 
 	if block.Header.BlockNum == 0 {
-		lastValidators = types.NewValidatorSet(nil, 0)
+		lastValidators = types.NewValidatorSet(nil, 0, nil, nil, nil)
 	} else {
 		prevBlk, err := ledger.GetBlock(block.Header.BlockNum - 1)
 		if prevBlk == nil {
-			return nil, fmt.Errorf("tdm get last blk %d nil %v", block.Header.BlockNum - 1, err)
+			return nil, fmt.Errorf("tdm get last blk %d nil %v", block.Header.BlockNum-1, err)
 		}
 
 		if err != nil {
@@ -177,6 +182,8 @@ func (cons *Core) LoadLastCommitStateFromBlk(block *bsComm.Block) (*state.State,
 		LastValidators:              lastValidators,
 		LastHeightValidatorsChanged: tdmBlk.LastHeightChanged,
 		PreviousHash:                lblkPreviousHash,
+		PrevVRFValue:                tdmBlk.BlkVRFValue,
+		PrevVRFProof:                tdmBlk.BlkVRFProof,
 	}, nil
 }
 
@@ -185,40 +192,46 @@ func (cons *Core) MakeGenesisLastCommitState(blk *bsComm.Block) (*state.State, e
 	if err != nil {
 		return nil, err
 	}
+
 	preblkHash, err := ledger.CalcBlockHash(blk)
 	if err != nil {
 		return nil, err
 	}
+
+	tdmBlk, err := types.Standard2Cons(blk)
+	if err != nil {
+		return nil, err
+	}
+
+	validatorSet.BgVRFValue = tdmBlk.Validators.BgVRFValue
+	validatorSet.BgVRFProof = tdmBlk.Validators.BgVRFProof
 
 	return &state.State{
 		LastBlockNum:  0,
 		LastBlockID:   types.BlockID{},
 		LastBlockTime: config.Config.GenesisTime,
 		Validators:    validatorSet,
-		LastValidators:                   types.NewValidatorSet(nil, 0),
+		LastValidators:                   types.NewValidatorSet(nil, 0, nil, nil, nil),
 		LastHeightValidatorsChanged:      0,
 		LastHeightConsensusParamsChanged: 0,
-		PreviousHash:                     preblkHash,
+		PreviousHash: preblkHash,
+		PrevVRFProof: tdmBlk.BlkVRFProof,
+		PrevVRFValue: tdmBlk.BlkVRFValue,
 	}, nil
 }
 
 func (cons *Core) LoadGeneValidators() (*types.ValidatorSet, error) {
 	validators := make([]*types.Validator, len(config.Config.GeneBftGroup))
 	for i, val := range config.Config.GeneBftGroup {
-
-		digestAddr, err := msp.Hash256(msp.GetPubBytesFromStr(val.PubKeyStr))
-		if err != nil {
-			return nil, err
-		}
+		digestAddr := msp.AccountPubkeyToAddress1(msp.StringToBccspKey(val.PubKeyStr))
 		validators[i] = &types.Validator{
-			Address:     types.Address(digestAddr),
-			PubKeyStr:   val.PubKeyStr,
-			//权重字段目前用不到
+			Address:   types.Address(digestAddr.GetBytes()),
+			PubKeyStr: val.PubKeyStr,
 			VotingPower: int64(val.Power),
 		}
 	}
-
-	return types.NewValidatorSet(validators, 0), nil
+	sort.Sort(types.ValidatorsByAddress(validators))
+	return types.NewValidatorSet(validators, 0, nil, nil, nil), nil
 }
 
 func (cons *Core) MakeGenesisBlk() (*types.Block, error) {
@@ -227,15 +240,13 @@ func (cons *Core) MakeGenesisBlk() (*types.Block, error) {
 		return nil, err
 	}
 
-	hash := sha256.New()
-	hash.Write([]byte("genesis"))
-	txid := fmt.Sprintf("%x", hash.Sum(nil)[:len(hash.Sum(nil))/2])
 	tx := common.Transaction{
-		Payload:   "genesis",
-		Txid:      txid,
-		Timestamp: 1505007000000,
-		Type:      txpool.HGS,
+		Payload:      []byte("genesis"),
+		ContractName: appComm.HNB,
 	}
+
+	signer := msp.GetSigner()
+	tx.Txid = signer.Hash(&tx)
 
 	var txs []*common.Transaction
 	txs = append(txs, &tx)
@@ -243,12 +254,30 @@ func (cons *Core) MakeGenesisBlk() (*types.Block, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	VRFProof4blk := []byte("BgVRFProof-blk-2018-09-05")
+	VRFValue4blk, err := msp.Hash256([]byte(VRFProof4blk))
+	if err != nil {
+		return nil, err
+	}
+
 	genesisiTime, _ := time.Parse("2006-01-02 15:04:05", "2018-05-14 00:00:00")
 	genesisHeader := &types.Header{
-		BlockNum: 0,
-		Time:     genesisiTime,
-		NumTxs:   int64(len(geneTDMTxs)),
+		BlockNum:    0,
+		Time:        genesisiTime,
+		NumTxs:      int64(len(geneTDMTxs)),
+		BlkVRFProof: VRFProof4blk,
+		BlkVRFValue: VRFValue4blk,
 	}
+
+	VRFProof4bg := []byte("BgVRFProof-bg-2018-09-05")
+	VRFValue4bg, err := msp.Hash256([]byte(VRFProof4bg))
+	if err != nil {
+		return nil, err
+	}
+
+	validatorSet.BgVRFValue = VRFValue4bg
+	validatorSet.BgVRFProof = VRFProof4bg
 
 	genesisBlk := &types.Block{
 		Header: genesisHeader,
@@ -289,7 +318,6 @@ func updateState(s state.State, blockID types.BlockID, header *types.Header) (st
 
 }
 
-// 从块里加载validators
 func (cons *Core) LoadValidators(blk *bsComm.Block) (valSet *types.ValidatorSet, err error) {
 	tdmBlk, err := types.Standard2Cons(blk)
 	if err != nil {

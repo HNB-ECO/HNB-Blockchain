@@ -1,7 +1,8 @@
 package common
 
 import (
-	"bccsp"
+	"HNB/ledger/merkle"
+	"HNB/msp"
 	"crypto/sha256"
 	"encoding/json"
 )
@@ -34,7 +35,7 @@ func (h hasher) Hash() []byte {
 			return nil
 		}
 
-		retBytes, err := bccsp.Hash(bytes, bccsp.SHA256)
+		retBytes, err := msp.Hash256(bytes)
 		if err != nil {
 			return nil
 		}

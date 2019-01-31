@@ -2,7 +2,7 @@ package types
 
 import (
 	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/merkle"
+	"HNB/ledger/merkle"
 )
 
 const (

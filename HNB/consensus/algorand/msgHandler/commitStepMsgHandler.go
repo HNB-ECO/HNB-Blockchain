@@ -6,7 +6,6 @@ import (
 )
 
 func (h *TDMMsgHandler) HandleCommitStepMsg(tdmMsg *cmn.TDMMessage) error {
-	//ps := h.PeerState
 
 	return nil
 }

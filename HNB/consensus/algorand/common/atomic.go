@@ -1,10 +1,9 @@
 package common
 
 import (
-	"sync/atomic"
 	"sync"
+	"sync/atomic"
 )
-
 
 type AtomicIndex struct {
 	index uint64
@@ -51,4 +50,3 @@ func (m *MutexBool) Get() bool {
 	m.RUnlock()
 	return b
 }
-

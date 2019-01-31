@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 )
+
 type TimeStatistic struct {
 	newRoundStart time.Time
 	newRoundEnd   float64
@@ -48,7 +49,6 @@ type TimeStatistic struct {
 	totaltxNum int
 }
 
-//进入 newRound 重置时间
 func (t *TimeStatistic) ResetConsumeTime(h *TDMMsgHandler) {
 	if h.Step == types.RoundStepNewHeight {
 		t.height = h.Height
@@ -72,7 +72,6 @@ func (t *TimeStatistic) ResetConsumeTime(h *TDMMsgHandler) {
 	}
 }
 
-//开始超时时间设置
 func (t *TimeStatistic) EndConsumeTime(h *TDMMsgHandler) {
 
 	if t.height == h.Height && h.Step == types.RoundStepNewRound {
@@ -172,7 +171,7 @@ func (t *TimeStatistic) StringIndented(indent string) string {
 	return fmt.Sprintf(`
 
 
-	                  %v共识统计信息
+	                  %vConsensus Info
 %s  %v
 -----------------------------------------------------------------------------
 %s  BlockNum:%v Round:%v USE:%d(s) TPS:%v

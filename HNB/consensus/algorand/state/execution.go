@@ -1,8 +1,7 @@
 package state
 
-import  (
-
-     "HNB/consensus/algorand/types"
+import (
+	"HNB/consensus/algorand/types"
 )
 
 type BlockExecutor struct {

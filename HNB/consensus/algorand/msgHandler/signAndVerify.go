@@ -1,10 +1,10 @@
 package msgHandler
 
 import (
-	"encoding/json"
-	"fmt"
 	cmn "HNB/consensus/algorand/common"
 	"HNB/msp"
+	"encoding/json"
+	"fmt"
 )
 
 func (h *TDMMsgHandler) Sign(message *cmn.TDMMessage) (*cmn.TDMMessage, error) {
@@ -28,25 +28,17 @@ func (h *TDMMsgHandler) Verify(message *cmn.TDMMessage, pubKeyID []byte) error {
 	if message == nil {
 		return fmt.Errorf("verify msg is nil")
 	}
-	//publicKey := message.PublicKey
-	//pk ,err := h.coor.PubKeyDecode(string(publicKey))
 	sign := message.Signature
-	//tdmLogger.Infof("verify sign %s", sign)
-
-	//message.PublicKey = nil
 	message.Signature = nil
 	defer func() {
-		//message.PublicKey = publicKey
 		message.Signature = sign
 	}()
 	c, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
-
-	//msp.GetBccspKeyFromPubKey()
-
-	ok, err := msp.Verify(nil, sign, c)
+	keyString := msp.PeerIDToString(pubKeyID)
+	ok, err := msp.Verify(msp.StringToBccspKey(keyString), sign, c)
 	if err != nil {
 		return err
 	}

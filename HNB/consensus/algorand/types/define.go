@@ -1,9 +1,10 @@
 package types
 
 import (
+	"HNB/bccsp"
+	"HNB/consensus/algorand/common"
+	"HNB/util"
 	"encoding/hex"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
 	"strings"
 	"sync"
 	"time"
@@ -12,10 +13,8 @@ import (
 const TimeFormat = "2006-01-02T15:04:05.000Z"
 const LOGGER_NAME = common.LOGGER_NAME
 
-//地址的数据类型
-type Address common.HexBytes
+type Address util.HexBytes
 
-//公钥类型
 type PubKey bccsp.Key
 
 type Signature interface {
@@ -28,13 +27,13 @@ type BitArray struct {
 	Elems []uint64 `json:"elems"` // NOTE: persisted via reflect, must be exported
 }
 type CanonicalJSONBlockID struct {
-	Hash        common.HexBytes            `json:"hash,omitempty"`
+	Hash        util.HexBytes              `json:"hash,omitempty"`
 	PartsHeader CanonicalJSONPartSetHeader `json:"parts,omitempty"`
 }
 
 type CanonicalJSONPartSetHeader struct {
-	Hash  common.HexBytes `json:"hash,omitempty"`
-	Total int             `json:"total,omitempty"`
+	Hash  util.HexBytes `json:"hash,omitempty"`
+	Total int           `json:"total,omitempty"`
 }
 
 type CanonicalJSONProposal struct {
@@ -79,7 +78,7 @@ func CanonicalBlockID(blockID BlockID) CanonicalJSONBlockID {
 }
 
 func (addr Address) String() string {
-	return strings.ToUpper(hex.EncodeToString(common.HexBytes(addr)))
+	return strings.ToUpper(hex.EncodeToString(util.HexBytes(addr)))
 }
 
 func CanonicalPartSetHeader(psh PartSetHeader) CanonicalJSONPartSetHeader {

@@ -6,8 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
-
+	cmn "HNB/consensus/algorand/common"
 )
 
 type RoundVoteSet struct {
@@ -39,14 +38,13 @@ type HeightVoteSet struct {
 	valSet  *ValidatorSet
 
 	mtx               sync.Mutex
-	round             int32                       // max tracked round
-	roundVoteSets     map[int]RoundVoteSet        // keys: [0...round]
-	peerCatchupRounds map[string][]int32 // keys: peer.ID; values: at most 2 rounds
+	round             int32                // max tracked round
+	roundVoteSets     map[int]RoundVoteSet // keys: [0...round]
+	peerCatchupRounds map[string][]int32   // keys: peer.ID; values: at most 2 rounds
 }
 
 func NewBlkNumVoteSet(height uint64, valSet *ValidatorSet) *HeightVoteSet {
-	hvs := &HeightVoteSet{
-	}
+	hvs := &HeightVoteSet{}
 	hvs.Reset(height, valSet)
 	return hvs
 }
@@ -213,7 +211,6 @@ func (hvs *HeightVoteSet) StringIndented(indent string) string {
 // If a peer claims that it has 2/3 majority for given blockKey, call this.
 // NOTE: if there are too many peers, or too much peer churn,
 // this can cause memory issues.
-// TODO: implement ability to remove peers too
 func (hvs *HeightVoteSet) SetPeerMaj23(round int32, type_ byte, pubKeyID []byte, blockID BlockID) error {
 	hvs.mtx.Lock()
 	defer hvs.mtx.Unlock()

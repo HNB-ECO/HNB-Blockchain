@@ -1,9 +1,9 @@
 package types
 
 import (
+	"HNB/ledger/merkle"
 	"bytes"
 	"fmt"
-	"HNB/consensus/algorand/merkle"
 
 	"HNB/bccsp"
 )
@@ -26,9 +26,8 @@ func (err *ErrEvidenceInvalid) Error() string {
 //-------------------------------------------
 
 // Evidence represents any provable malicious activity by a validator
-/// /证据由验证者代表任何可证明的恶意活动。
 type Evidence interface {
-	Height() uint64               // height of the equivocation
+	Height() uint64              // height of the equivocation
 	Address() []byte             // address of the equivocating validator
 	Index() int                  // index of the validator in the validator set
 	Hash() []byte                // hash of the evidence
@@ -37,14 +36,6 @@ type Evidence interface {
 
 	String() string
 }
-
-// TODO shiyou
-//func RegisterEvidences(cdc *amino.Codec) {
-//	cdc.RegisterInterface((*Evidence)(nil), nil)
-//	cdc.RegisterConcrete(&DuplicateVoteEvidence{}, "tendermint/DuplicateVoteEvidence", nil)
-//}
-
-//-------------------------------------------
 
 // DuplicateVoteEvidence contains evidence a validator signed two conflicting votes.
 type DuplicateVoteEvidence struct {
@@ -65,7 +56,6 @@ func (dve *DuplicateVoteEvidence) Height() uint64 {
 }
 
 // Address returns the address of the validator.
-// TODO shiyou
 func (dve *DuplicateVoteEvidence) Address() []byte {
 	return nil
 }
@@ -76,7 +66,6 @@ func (dve *DuplicateVoteEvidence) Index() int {
 }
 
 // Hash returns the hash of the evidence.
-// TODO shiyou
 func (dve *DuplicateVoteEvidence) Hash() []byte {
 	return nil
 }
@@ -105,29 +94,12 @@ func (dve *DuplicateVoteEvidence) Verify(chainID string) error {
 		return fmt.Errorf("DuplicateVoteEvidence Error: BlockIDs are the same (%v) - not a real duplicate vote", dve.VoteA.BlockID)
 	}
 
-	// Signatures must be valid
-	// todo shiyou
-	//if !dve.PubKey.VerifyBytes(dve.VoteA.SignBytes(chainID), dve.VoteA.Signature) {
-	//	return fmt.Errorf("DuplicateVoteEvidence Error verifying VoteA: %v", ErrVoteInvalidSignature)
-	//}
-	//if !dve.PubKey.VerifyBytes(dve.VoteB.SignBytes(chainID), dve.VoteB.Signature) {
-	//	return fmt.Errorf("DuplicateVoteEvidence Error verifying VoteB: %v", ErrVoteInvalidSignature)
-	//}
 
 	return nil
 }
 
 // Equal checks if two pieces of evidence are equal.
 func (dve *DuplicateVoteEvidence) Equal(ev Evidence) bool {
-	//if _, ok := ev.(*DuplicateVoteEvidence); !ok {
-	//	return false
-	//}
-
-	// just check their hashes
-	// TODO shiyou
-	//dveHash := aminoHasher(dve).Hash()
-	//evHash := aminoHasher(ev).Hash()
-	//return bytes.Equal(dveHash, evHash)
 	return true
 }
 
@@ -145,7 +117,7 @@ func NewMockGoodEvidence(height uint64, index int, address []byte) MockGoodEvide
 	return MockGoodEvidence{height, address, index}
 }
 
-func (e MockGoodEvidence) Height() uint64   { return e.Height_ }
+func (e MockGoodEvidence) Height() uint64  { return e.Height_ }
 func (e MockGoodEvidence) Address() []byte { return e.Address_ }
 func (e MockGoodEvidence) Index() int      { return e.Index_ }
 func (e MockGoodEvidence) Hash() []byte {

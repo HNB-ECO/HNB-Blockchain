@@ -3,8 +3,9 @@ package msgHandler
 import (
 	cmn "HNB/consensus/algorand/common"
 	"HNB/consensus/algorand/types"
-	"time"
+	"HNB/msp"
 	"encoding/json"
+	"time"
 )
 
 /**
@@ -26,37 +27,43 @@ func (h *TDMMsgHandler) HandleInnerProposalMsg(tdmMsg *cmn.TDMMessage) error {
 }
 
 // add for verify proposal message
-func (h *TDMMsgHandler) VerifyProposal(tdmMsg *cmn.TDMMessage, peerId uint64) (*cmn.ProposalMessage, error) {
-	proposalMsg := &cmn.ProposalMessage{}
-	err := json.Unmarshal(tdmMsg.Payload, proposalMsg)
-	if err != nil {
-		return nil, err
-	}
-	sign := proposalMsg.Signature
-	proposalMsg.Signature = nil
-	//TODO verify proposal
-
-	//
-	//pk, err := h.Network.GetPK(peerId.Name)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//data, err := proto.Marshal(proposalMsg)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//ok, err := h.coor.Verify(pk, data, sign)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if !ok {
-	//	return nil, fmt.Errorf("verify error ")
-	//}
-	proposalMsg.Signature = sign
-	return proposalMsg, nil
-}
+//func (h *TDMMsgHandler) VerifyProposal(tdmMsg *cmn.TDMMessage, peerId uint64) (*cmn.ProposalMessage, error) {
+//	proposalMsg := &cmn.ProposalMessage{}
+//	err := json.Unmarshal(tdmMsg.Payload, proposalMsg)
+//	if err != nil {
+//		return nil, err
+//	}
+//	sign := proposalMsg.Signature
+//	proposalMsg.Signature = nil
+//	//TODO verify proposal
+//
+//	//
+//	//pk, err := h.Network.GetPK(peerId.Name)
+//	//if err != nil {
+//	//	return nil, err
+//	//}
+//	//data, err := proto.Marshal(proposalMsg)
+//	//if err != nil {
+//	//	return nil, err
+//	//}
+//	//ok, err := h.coor.Verify(pk, data, sign)
+//	//if err != nil {
+//	//	return nil, err
+//	//}
+//	//if !ok {
+//	//	return nil, fmt.Errorf("verify error ")
+//	//}
+//	proposalMsg.Signature = sign
+//	return proposalMsg, nil
+//}
 
 func (h *TDMMsgHandler) HandleOuterProposalMsg(tdmMsg *cmn.TDMMessage, pubKeyID []byte) error {
+	selected, proposer := h.isProposerFunc(h, h.Height, h.Round)
+	if !selected && proposer.PubKeyStr != msp.PeerIDToString(pubKeyID) {
+		ConsLog.Warningf(LOGTABLE_CONS, "#(%v-%v) (HandleOuterProposalMsg) not %v's turn to propose", h.Height, h.Round, pubKeyID)
+		return nil
+	}
+
 	proposalMsg := &cmn.ProposalMessage{}
 	err := json.Unmarshal(tdmMsg.Payload, proposalMsg)
 	if err != nil {

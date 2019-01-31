@@ -1,10 +1,11 @@
 package types
 
 import (
+	cmn "HNB/consensus/algorand/common"
+	"HNB/util"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
 	"github.com/pkg/errors"
 	"strings"
 	"sync"
@@ -31,7 +32,6 @@ func NewConflictingVoteError(val *Validator, voteA, voteB *Vote) *ErrVoteConflic
 }
 
 // Types of votes
-// TODO Make a new type "VoteType"
 const (
 	VoteTypePrevote   = byte(0x01)
 	VoteTypePrecommit = byte(0x02)
@@ -49,14 +49,14 @@ func IsVoteTypeValid(type_ byte) bool {
 }
 
 type Vote struct {
-	ValidatorAddress Address      `json:"validator_address"`
-	ValidatorIndex   int          `json:"validator_index"`
-	Height           uint64       `json:"height"`
-	Round            int32        `json:"round"`
-	Timestamp        time.Time    `json:"timestamp"`
-	Type             byte         `json:"type"`
-	BlockID          BlockID      `json:"block_id"` // zero if vote is nil.
-	Signature        cmn.HexBytes `json:"signature"`
+	ValidatorAddress Address       `json:"validator_address"`
+	ValidatorIndex   int           `json:"validator_index"`
+	Height           uint64        `json:"height"`
+	Round            int32         `json:"round"`
+	Timestamp        time.Time     `json:"timestamp"`
+	Type             byte          `json:"type"`
+	BlockID          BlockID       `json:"block_id"` // zero if vote is nil.
+	Signature        util.HexBytes `json:"signature"`
 }
 
 func (vote *Vote) SignBytes(chainID string) []byte {
@@ -307,7 +307,7 @@ func (voteSet *VoteSet) addVerifiedVote(vote *Vote, blockKey string, votingPower
 	}
 
 	origSum := votesByBlock.sum
-	quorum := voteSet.valSet.TotalVotingPower()*2/3 + 1 //所有共识组成员的2/3 + 1
+	quorum := voteSet.valSet.TotalVotingPower()*2/3 + 1
 	votesByBlock.addVerifiedVote(vote, votingPower)
 	if origSum < quorum && quorum <= votesByBlock.sum {
 		// Only consider the first quorum reached
@@ -329,7 +329,6 @@ func (voteSet *VoteSet) addVerifiedVote(vote *Vote, blockKey string, votingPower
 // If a peer claims that it has 2/3 majority for given blockKey, call this.
 // NOTE: if there are too many peers, or too much peer churn,
 // this can cause memory issues.
-// TODO: implement ability to remove peers too
 // NOTE: VoteSet must not be nil
 func (voteSet *VoteSet) SetPeerMaj23(peerID []byte, blockID BlockID) error {
 	if voteSet == nil {
@@ -536,18 +535,6 @@ func (voteSet *VoteSet) MakeCommit() *Commit {
 	}
 }
 
-//--------------------------------------------------------------------------------
-
-/*
-	Votes for a particular block
-	There are two ways a *blockVotes gets created for a blockKey.
-	1. first (non-conflicting) vote of a validator w/ blockKey (peerMaj23=false)
-	2. A peer claims to have a 2/3 majority w/ blockKey (peerMaj23=true)
-	对特定块进行投票
-	blockKey有两种方式为blockKey创建。
-	1.验证器的第一次（非冲突）投票w / blockKey（peerMaj23 = false）
-	2.同行声称拥有2/3的多数w / blockKey（peerMaj23 = true）
-*/
 type blockVotes struct {
 	peerMaj23 bool          // peer claims to have maj23
 	bitArray  *cmn.BitArray // valIndex -> hasVote?

@@ -1,5 +1,9 @@
 package types
 
+import (
+	"github.com/tendermint/go-amino"
+)
+
 // Reserved event types
 const (
 	EventBond              = "Bond"

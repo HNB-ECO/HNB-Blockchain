@@ -4,8 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync/atomic"
-
-	"github.com/op/go-logging"
+	//"github.com/op/go-logging"
 )
 
 var (
@@ -14,13 +13,9 @@ var (
 )
 
 const LOGGER_NAME = "tendermint"
-const LOGGER_BFTMGR = "bftMgr"
 
 // Service defines a service that can be started, stopped, and reset.
 type Service interface {
-	// Start the service.
-	// If it's already started or stopped, will return an error.
-	// If OnStart() returns an error, it's returned by Start()
 	Start() error
 	OnStart() error
 
@@ -43,55 +38,9 @@ type Service interface {
 
 	// String representation of the service
 	String() string
-
-	// SetLogger sets a logger.
-	SetLogger(logger *logging.Logger)
 }
 
-/*
-Classical-inheritance-style service declarations. Services can be started, then
-stopped, then optionally restarted.
-
-Users can override the OnStart/OnStop methods. In the absence of errors, these
-methods are guaranteed to be called at most once. If OnStart returns an error,
-service won't be marked as started, so the user can call Start again.
-
-A call to Reset will panic, unless OnReset is overwritten, allowing
-OnStart/OnStop to be called again.
-
-The caller must ensure that Start and Stop are not called concurrently.
-
-It is ok to call Stop without calling Start first.
-
-Typical usage:
-
-	type FooService struct {
-		BaseService
-		// private fields
-	}
-
-	func NewFooService() *FooService {
-		fs := &FooService{
-			// init
-		}
-		fs.BaseService = *NewBaseService(log, "FooService", fs)
-		return fs
-	}
-
-	func (fs *FooService) OnStart() error {
-		fs.BaseService.OnStart() // Always call the overridden method.
-		// initialize private fields
-		// start subroutines, etc.
-	}
-
-	func (fs *FooService) OnStop() error {
-		fs.BaseService.OnStop() // Always call the overridden method.
-		// close/destroy private fields
-		// stop subroutines, etc.
-	}
-*/
 type BaseService struct {
-	Logger  *logging.Logger
 	name    string
 	started uint32 // atomic
 	stopped uint32 // atomic
@@ -102,34 +51,20 @@ type BaseService struct {
 }
 
 // NewBaseService creates a new BaseService.
-func NewBaseService(logger *logging.Logger, name string, impl Service) *BaseService {
-	if logger == nil {
-		logger = logging.MustGetLogger(LOGGER_NAME)
-	}
-
+func NewBaseService(name string, impl Service) *BaseService {
 	return &BaseService{
-		Logger: logger,
-		name:   name,
-		quit:   make(chan struct{}),
-		impl:   impl,
+		name: name,
+		quit: make(chan struct{}),
+		impl: impl,
 	}
 }
-
-// SetLogger implements Service by setting a logger.
-func (bs *BaseService) SetLogger(logger *logging.Logger) {
-	bs.Logger = logger
-}
-
-// Start implements Service by calling OnStart (if defined). An error will be
-// returned if the service is already running or stopped. Not to start the
-// stopped service, you need to call Reset.
 func (bs *BaseService) Start() error {
 	if atomic.CompareAndSwapUint32(&bs.started, 0, 1) {
 		if atomic.LoadUint32(&bs.stopped) == 1 {
-			bs.Logger.Error(Fmt("Not starting %v -- already stopped", bs.name), "impl", bs.impl)
+			//bs.Logger.Error(Fmt("Not starting %v -- already stopped", bs.name), "impl", bs.impl)
+			//TODO log
 			return ErrAlreadyStopped
 		}
-		bs.Logger.Info(Fmt("Starting %v", bs.name), "impl", bs.impl)
 		err := bs.impl.OnStart()
 		if err != nil {
 			// revert flag
@@ -138,25 +73,20 @@ func (bs *BaseService) Start() error {
 		}
 		return nil
 	}
-	bs.Logger.Debug(Fmt("Not starting %v -- already started", bs.name), "impl", bs.impl)
+	//	bs.Logger.Debug(Fmt("Not starting %v -- already started", bs.name), "impl", bs.impl)
 	return ErrAlreadyStarted
 }
 
-// OnStart implements Service by doing nothing.
-// NOTE: Do not put anything in here,
-// that way users don't need to call BaseService.OnStart()
 func (bs *BaseService) OnStart() error { return nil }
 
-// Stop implements Service by calling OnStop (if defined) and closing quit
-// channel. An error will be returned if the service is already stopped.
 func (bs *BaseService) Stop() error {
 	if atomic.CompareAndSwapUint32(&bs.stopped, 0, 1) {
-		bs.Logger.Info(Fmt("Stopping %v", bs.name), "impl", bs.impl)
+		//		bs.Logger.Info(Fmt("Stopping %v", bs.name), "impl", bs.impl)
 		bs.impl.OnStop()
 		close(bs.quit)
 		return nil
 	}
-	bs.Logger.Debug(Fmt("Stopping %v (ignoring: already stopped)", bs.name), "impl", bs.impl)
+	//	bs.Logger.Debug(Fmt("Stopping %v (ignoring: already stopped)", bs.name), "impl", bs.impl)
 	return ErrAlreadyStopped
 }
 
@@ -169,7 +99,7 @@ func (bs *BaseService) OnStop() {}
 // will be returned if the service is running.
 func (bs *BaseService) Reset() error {
 	if !atomic.CompareAndSwapUint32(&bs.stopped, 1, 0) {
-		bs.Logger.Debug(Fmt("Can't reset %v. Not stopped", bs.name), "impl", bs.impl)
+		//		bs.Logger.Debug(Fmt("Can't reset %v. Not stopped", bs.name), "impl", bs.impl)
 		return fmt.Errorf("can't reset running %s", bs.name)
 	}
 
@@ -189,7 +119,7 @@ func (bs *BaseService) OnReset() error {
 // IsRunning implements Service by returning true or false depending on the
 // service's state.
 func (bs *BaseService) IsRunning() bool {
-	bs.Logger.Debugf("(service) %s state start %d stop %d", bs.impl.String(), atomic.LoadUint32(&bs.started), atomic.LoadUint32(&bs.stopped))
+	//	bs.Logger.Debugf("(service) %s state start %d stop %d", bs.impl.String(), atomic.LoadUint32(&bs.started), atomic.LoadUint32(&bs.stopped))
 	return atomic.LoadUint32(&bs.started) == 1 && atomic.LoadUint32(&bs.stopped) == 0
 }
 

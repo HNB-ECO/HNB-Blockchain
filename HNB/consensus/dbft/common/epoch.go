@@ -7,7 +7,6 @@ func GetEpochWitnessesLen(epochNo uint64) int {
 	return 0
 }
 
-// todo  获取见证人列表
 func GetEpochWitnesses(epochNo uint64) []*types.Validator {
 	return nil
 }

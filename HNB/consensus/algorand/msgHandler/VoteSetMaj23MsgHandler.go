@@ -1,6 +1,6 @@
 package msgHandler
 
-import  (
+import (
 	cmn "HNB/consensus/algorand/common"
 	"encoding/json"
 )

@@ -1,18 +1,20 @@
 package msgHandler
 
 import (
+	"HNB/config"
 	cmn "HNB/consensus/algorand/common"
 	"HNB/consensus/algorand/types"
-	"time"
-	"strconv"
-	"HNB/config"
+	"HNB/consensus/consensusManager/comm/consensusType"
 	"HNB/p2pNetwork"
+	"HNB/p2pNetwork/message/reqMsg"
 	"encoding/json"
+	"fmt"
+	"time"
 )
 
 func (h *TDMMsgHandler) enterPrevote(height uint64, round int32) {
 	timeoutPrevote := config.Config.TimeoutPrevote
-	ConsLog.Debugf(LOGTABLE_CONS, "height:(%v,%v), round:(%v,%v)," +
+	ConsLog.Debugf(LOGTABLE_CONS, "height:(%v,%v), round:(%v,%v),"+
 		"step:(%v,%v)", h.Height, height, h.Round, round,
 		types.RoundStepPrevote, h.Step)
 
@@ -24,31 +26,23 @@ func (h *TDMMsgHandler) enterPrevote(height uint64, round int32) {
 	h.timeState.SetEnterPreVoteStart()
 
 	// Sign and broadcast vote as necessary
-	// 必要时签署和广播投票
 	result := h.doPrevote(height, round)
-	//如果结果是1 表示提案块可能还没有收到
 	if result == 1 {
 		h.scheduleTimeout(h.AddTimeOut(1000), height, round, types.RoundStepPropose)
 		return
 	}
 	defer func() {
-		//h.Logger.Warning("进入defer func")
-		// Done enterPrevote:
 		h.updateRoundStep(round, types.RoundStepPrevote)
 		h.timeState.EndConsumeTime(h)
 		h.newStep()
 	}()
-	//设置preote时间
 	h.scheduleTimeout(h.AddTimeOut(timeoutPrevote), height, round, types.RoundStepPrevote)
-	// Once `applyAddVote` hits any +2/3 prevotes, we will go to PrevoteWait
-	// (so we have more time to try and collect +2/3 prevotes for a single block)
 }
 
 func (h *TDMMsgHandler) defaultDoPrevote(height uint64, round int32) uint64 {
 	if h.ProposalBlock == nil {
-		//如果优先收到预投票块
 		ConsLog.Warningf(LOGTABLE_CONS, "#(%v-%v) (defaultDoPrevote) ProposalBlock is nil TryProposal,time=%v", h.Height, h.Round, h.TryProposalTimes)
-		if h.TryProposalTimes < 15 {
+		if h.TryProposalTimes < 2 { // < 5
 			h.TryProposalTimes = h.TryProposalTimes + 1
 			return 1
 		} else {
@@ -57,8 +51,7 @@ func (h *TDMMsgHandler) defaultDoPrevote(height uint64, round int32) uint64 {
 
 	}
 
-	//如果当前存在锁定块并且本提案的块Hash与锁定块不同，而且距离锁定块的round已经超过一轮
-	if h.LockedBlock != nil && !h.LockedBlock.HashesTo(h.ProposalBlock.Hash()) && (h.Round-h.LockedRound) > int32(len(h.Validators.Validators)) {
+	if h.LockedBlock != nil && !h.LockedBlock.HashesTo(h.ProposalBlock.Hash()) && (h.Round-h.LockedRound) < int32(len(h.Validators.Validators)) {
 		ConsLog.Infof(LOGTABLE_CONS, "enterPrevote: Block was locked")
 		h.signAddVote(types.VoteTypePrevote, h.LockedBlock.Hash(), h.LockedBlockParts.Header())
 		return 0
@@ -102,9 +95,7 @@ func (h *TDMMsgHandler) enterPrevoteWait(height uint64, round int32) {
 }
 
 // sign the vote and publish on internalMsgQueue
-// 签署投票并在发布到队列
 func (h *TDMMsgHandler) signAddVote(type_ byte, hash []byte, header types.PartSetHeader) *types.Vote {
-	//不是共识组不用提交
 	if h.digestAddr == nil || !h.Validators.HasAddress(h.digestAddr) {
 		ConsLog.Errorf(LOGTABLE_CONS, "#(%v-%v) (signAddVote)h.digestAddr == nil or !h.Validators.HasAddress(h.digestAddr) return nil,h.digestAddr=%v", h.Height, h.Round, h.digestAddr)
 		return nil
@@ -125,26 +116,34 @@ func (h *TDMMsgHandler) signAddVote(type_ byte, hash []byte, header types.PartSe
 func (h *TDMMsgHandler) signVote(type_ byte, hash []byte, header types.PartSetHeader) (*types.Vote, error) {
 	addr := h.digestAddr
 	valIndex, _ := h.Validators.GetByAddress(addr)
+	timeSeconds := time.Unix(time.Now().UTC().Unix(), 0).UTC()
 	vote := &types.Vote{
 		ValidatorAddress: types.Address(addr),
 		ValidatorIndex:   int(valIndex),
 		Height:           h.Height,
 		Round:            h.Round,
-		Timestamp:        time.Now().UTC(),
+		Timestamp:        timeSeconds,
 		Type:             type_,
 		BlockID:          types.BlockID{hash, header},
 	}
+
+	vote, err := h.mySignVote(vote)
+	if err != nil {
+		ConsLog.Errorf(LOGTABLE_CONS, "sign vote err %v", err)
+		return nil, fmt.Errorf("sign vote err %v", err)
+	}
+
 	return vote, nil
 }
 
 func (h *TDMMsgHandler) buildHashVoteMsgFromType(vote *types.Vote) (*cmn.PeerMessage, error) {
-	bitarray := &cmn.BitArray{ //TODO binarray从哪里赋值
+	bitarray := &cmn.BitArray{
 
 	}
 	HashVoteMsg := &cmn.HasVoteMessage{
 		Height:        vote.Height,
 		Round:         vote.Round,
-		VoteType:      cmn.VoteType(vote.Type), //TODO INDEX没有赋值
+		VoteType:      cmn.VoteType(vote.Type),
 		VotesBitArray: bitarray,
 	}
 
@@ -156,7 +155,7 @@ func (h *TDMMsgHandler) buildHashVoteMsgFromType(vote *types.Vote) (*cmn.PeerMes
 
 	tdmMsg := &cmn.TDMMessage{
 		Payload: votemsg,
-		Type:    cmn.TDMType_MsgVote, //TODO 不确定该值是否正确
+		Type:    cmn.TDMType_MsgVote,
 	}
 
 	tdmMsgSign, err := h.Sign(tdmMsg)
@@ -167,31 +166,34 @@ func (h *TDMMsgHandler) buildHashVoteMsgFromType(vote *types.Vote) (*cmn.PeerMes
 
 	tdmData, err := json.Marshal(tdmMsgSign)
 	if err != nil {
-		h.Logger.Errorf(" (buildHashVoteMsgFromType) the TDMType_MsgVote payload %s,err", tdmMsg.Payload, err)
+		ConsLog.Errorf(LOGTABLE_CONS, "TDMType_MsgVote payload %s,%v", tdmMsg.Payload, err)
+		return nil, err
+	}
+	conMsg := &consensusType.ConsensusMsg{
+		Type:    int(consensusType.Tendermint),
+		Payload: tdmData,
+	}
+
+	conData, err := json.Marshal(conMsg)
+	if err != nil {
 		return nil, err
 	}
 
-	netMsg := &netProto.Message{
-		Type:      netProto.Message_CONSENSUS,
-		Payload:   tdmData,
-		ChainId:   h.ChainID,
-		Timestamp: strconv.FormatUint(util.GetCurrentMillisecond(), 10),
-	}
-
-	peerMsg := &txComm.PeerMessage{
+	peerMsg := &cmn.PeerMessage{
 		Sender:      h.ID,
-		Msg:         netMsg,
+		Msg:         conData,
 		IsBroadCast: false,
 	}
 
 	return peerMsg, nil
 }
-func (h *TDMMsgHandler) broadcatstVote(msg *cmn.PeerMessage) {
 
-	p2pNetwork.Xmit(,true)
-	h.Network.Broadcast(msg.Msg, netProto.PeerEndpoint_VALIDATOR)
+func (h *TDMMsgHandler) broadcatstVote(msg *cmn.PeerMessage) {
+	m, _ := json.Marshal(msg)
+	p2pNetwork.Xmit(reqMsg.NewConsMsg(m), true)
 }
 
 func (h *TDMMsgHandler) broadcatstHashVote(msg *cmn.PeerMessage) {
-	h.Network.Broadcast(msg.Msg, netProto.PeerEndpoint_VALIDATOR)
+	m, _ := json.Marshal(msg)
+	p2pNetwork.Xmit(reqMsg.NewConsMsg(m), true)
 }

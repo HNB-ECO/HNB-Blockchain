@@ -1,13 +1,11 @@
 package msgHandler
 
 import (
-	"HNB/consensus/algorand/types"
-	"HNB/consensus/algorand/merkle"
 	cmn "HNB/consensus/algorand/common"
+	"HNB/consensus/algorand/types"
+	"HNB/ledger/merkle"
 	"encoding/json"
 	"fmt"
-	"HNB/consensus/algorand/bftGroup/vrf"
-	"HNB/msp"
 )
 
 func (h *TDMMsgHandler) HandleBlockPartMsg(tdmMsg *cmn.TDMMessage) error {
@@ -60,39 +58,33 @@ func (h *TDMMsgHandler) addProposalBlockPart(height uint64, part *types.Part, ve
 			return true, err
 		}
 		// 校验VRFValue和VRFProof
-		proposer := proposalBlk.Proposer
-		VRFValue := proposalBlk.BlkVRFValue
-		VRFProof := proposalBlk.BlkVRFProof
-
-		VRFBlkData := &vrf.VRFBlkData{
-			PrevVrf:  h.LastCommitState.PrevVRFValue,
-			BlockNum: proposalBlk.BlockNum,
-		}
-
-		_, val := h.Validators.GetByAddress(proposer.Address)
-		pk, err := msp.PubKeyDecode(msp.ECDSAP256, val.PubKeyStr)
-		if err != nil {
-			return true, err
-		}
-
-		VRFVerifySuccess, err := vrf.VerifyVRF4Blk(pk, VRFBlkData, VRFValue, VRFProof, msp.GetAlgType())
-		if err != nil {
-			return true, err
-		}
-
-		if !VRFVerifySuccess {
-			return true, fmt.Errorf("(blockPart) VRFVerify fail proposer %v \n VRFValue %v \n VRFProof %v", proposer.Address, VRFValue, VRFProof)
+		//proposer := proposalBlk.Proposer
+		//VRFValue := proposalBlk.BlkVRFValue
+		//VRFProof := proposalBlk.BlkVRFProof
+		//
+		//VRFBlkData := &vrf.VRFBlkData{
+		//	PrevVrf:  h.LastCommitState.PrevVRFValue,
+		//	BlockNum: proposalBlk.BlockNum,
+		//}
+		//
+		//_, val := h.Validators.GetByAddress(proposer.Address)
+		//pk := msp.StringToBccspKey(val.PubKeyStr)
+		//if err != nil {
+		//	return true, err
+		//}
+		if !h.validateProposalBlkFunc(h, proposalBlk) {
+			return true, fmt.Errorf("proposal validate fail")
 		}
 
 		h.ProposalBlock = proposalBlk
-		ConsLog.Debugf(LOGTABLE_CONS,"(blockPart 2 proposal block) ", h.ProposalBlock)
+		ConsLog.Debugf(LOGTABLE_CONS, "(blockPart 2 proposal block) ", h.ProposalBlock)
 
 		if len(h.ProposalBlock.LastCommit.Precommits) > 0 {
-			ConsLog.Debugf(LOGTABLE_CONS,"precommit vote time %v", h.ProposalBlock.LastCommit) //中间断掉节点的情况会报空指针 所以取消打印时间
+			ConsLog.Debugf(LOGTABLE_CONS, "precommit vote time %v", h.ProposalBlock.LastCommit) //中间断掉节点的情况会报空指针 所以取消打印时间
 		}
 
-		ConsLog.Infof(LOGTABLE_CONS, "Received complete proposal block", "height",
-			h.ProposalBlock.BlockNum, "blk hash", h.ProposalBlock.Hash(), "lastCommit hash", h.ProposalBlock.LastCommit.Hash())
+		ConsLog.Infof(LOGTABLE_CONS, "Received complete proposal block height:%v hash:%v lastCommit_hash:%v",
+			h.ProposalBlock.BlockNum, h.ProposalBlock.Hash(), h.ProposalBlock.LastCommit.Hash())
 
 		if h.Step == types.RoundStepPropose {
 			h.enterPrevote(height, h.Round)

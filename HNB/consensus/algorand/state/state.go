@@ -41,7 +41,11 @@ type State struct {
 
 	// 上个块的hash值
 	PreviousHash []byte
+	// 上个块的VRFValue
+	PrevVRFValue []byte
 
+	// 上个块的VRFProof
+	PrevVRFProof []byte
 	// The latest AppHash we've received from calling abci.Commit()
 	//AppHash []byte
 }
@@ -115,7 +119,57 @@ func (s State) MakeBlock(blkNum uint64, txs []types.Tx, commit *types.Commit) (*
 	}
 
 	block.ValidatorInfo = valInfo
-	block.Proposer = s.Validators.Proposer
+	return block, block.MakePartSet(1024 * 1024)
+}
+
+func (s State) MakeBlockVRF(material *types.BlkMaterial) (*types.Block, *types.PartSet) {
+	// build base block
+	block := types.MakeBlock(material.Height, material.Txs, material.Commit)
+
+	// fill header with state data
+	//block.ChainID = s.ChainID
+	//block.NumTxs = int64(material.NumTxs)
+	block.TotalTxs = s.LastBlockTotalTx + block.NumTxs
+	block.LastBlockID = s.LastBlockID
+	block.ValidatorsHash = s.Validators.Hash()
+	//block.AppHash = s.AppHash
+	block.ConsensusHash = s.ConsensusParams.Hash()
+	//block.LastResultsHash = s.LastResultsHash
+	block.BlkVRFValue = material.BlkVRFValue
+	block.BlkVRFProof = material.BlkVRFProof
+
+	var changeHeight = s.LastHeightValidatorsChanged
+	valInfo := &types.ValidatorInfo{
+		LastHeightChanged: s.LastHeightValidatorsChanged,
+	}
+	if changeHeight == material.Height {
+		valInfo.Validators = s.Validators.Copy()
+	}
+
+	valInfo.Validators.Proposer = material.Proposer
+	block.ValidatorInfo = valInfo
+
+	return block, block.MakePartSet(1024 * 1024)
+}
+
+func (s State) MakeBlockDPoS(material *types.BlkMaterial) (*types.Block, *types.PartSet) {
+	// build base block
+	block := types.MakeBlock(material.Height, material.Txs, material.Commit)
+
+	// fill header with state data
+	block.NumTxs = int64(material.NumTxs)
+	block.TotalTxs = s.LastBlockTotalTx + block.NumTxs
+	block.LastBlockID = s.LastBlockID
+	block.ValidatorsHash = s.Validators.Hash()
+	block.ConsensusHash = s.ConsensusParams.Hash()
+
+	valInfo := &types.ValidatorInfo{
+		LastHeightChanged: s.LastHeightValidatorsChanged,
+	}
+
+	valInfo.Validators = s.Validators.Copy()
+	valInfo.Validators.Proposer = material.Proposer
+	block.ValidatorInfo = valInfo
 
 	return block, block.MakePartSet(1024 * 1024)
 }

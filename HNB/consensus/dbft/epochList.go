@@ -1,8 +1,8 @@
 package dbft
 
 import (
+	"HNB/logging"
 	"fmt"
-	"github.com/op/go-logging"
 	"sync"
 )
 
@@ -11,13 +11,14 @@ type EpochListCache struct {
 	list    map[uint64]*Epoch
 	chainid string
 
-	Logger *logging.Logger
+	Logger logging.LogModule
 }
 
 func NewEpochList(chainid string) *EpochListCache {
 	return &EpochListCache{
 		list:    make(map[uint64]*Epoch, 0),
 		chainid: chainid,
+		Logger:  logging.GetLogIns(),
 	}
 }
 
@@ -29,7 +30,7 @@ func (elc *EpochListCache) isExist(epochNo uint64) bool {
 	if !ok {
 		epochInfo, err := LoadEpochInfo(elc.chainid, epochNo)
 		if err != nil {
-			elc.Logger.Errorf("LoadEpochInfo err %s", err.Error())
+			elc.Logger.Errorf(LOGTABLE_DBFT, "LoadEpochInfo err %s", err.Error())
 			return false
 		}
 		if epochInfo == nil {
@@ -39,7 +40,6 @@ func (elc *EpochListCache) isExist(epochNo uint64) bool {
 	return ok
 }
 
-//todo 需要读取数据库信息
 func (elc *EpochListCache) GetEpoch(epochNo uint64) *Epoch {
 	elc.Lock()
 	defer elc.Unlock()
@@ -47,7 +47,7 @@ func (elc *EpochListCache) GetEpoch(epochNo uint64) *Epoch {
 	if epoch == nil {
 		epochInfo, err := LoadEpochInfo(elc.chainid, epochNo)
 		if err != nil {
-			elc.Logger.Errorf("LoadEpochInfo err %s", err.Error())
+			elc.Logger.Errorf(LOGTABLE_DBFT, "LoadEpochInfo err %s", err.Error())
 			return nil
 		}
 		if epochInfo == nil {
@@ -55,9 +55,9 @@ func (elc *EpochListCache) GetEpoch(epochNo uint64) *Epoch {
 		}
 		epoch = epochInfo
 		elc.list[epochNo] = epoch
-		elc.Logger.Infof("LoadEpochInfo store epoch %d", epochInfo.EpochNo)
+		elc.Logger.Infof(LOGTABLE_DBFT, "LoadEpochInfo store epoch %d", epochInfo.EpochNo)
 	}
-	elc.Logger.Infof("EpochListCache %v", epoch)
+	elc.Logger.Infof(LOGTABLE_DBFT, "EpochListCache %v", epoch)
 	return epoch
 }
 
@@ -67,7 +67,7 @@ func (elc *EpochListCache) SetEpoch(epoch *Epoch) error {
 	}
 	elc.Lock()
 	elc.list[epoch.EpochNo] = epoch
-	elc.Logger.Infof("store epoch %d", epoch.EpochNo)
+	elc.Logger.Infof(LOGTABLE_DBFT, "store epoch %d", epoch.EpochNo)
 	elc.Unlock()
 	return nil
 }
@@ -85,7 +85,7 @@ func (elc *EpochListCache) CleanEpoch(epochNo uint64) error {
 		return nil
 	}
 	targetEpochNo = epochNo - 50
-	elc.Logger.Infof("CleanEpoch less than %d", targetEpochNo)
+	elc.Logger.Infof(LOGTABLE_DBFT, "CleanEpoch less than %d", targetEpochNo)
 
 	elc.Lock()
 	for _, epoch := range elc.list {
@@ -93,7 +93,7 @@ func (elc *EpochListCache) CleanEpoch(epochNo uint64) error {
 			return fmt.Errorf("epoch is nil")
 		}
 		if epoch.EpochNo < targetEpochNo {
-			elc.Logger.Infof("CleanEpoch epoch %d", epoch.EpochNo)
+			elc.Logger.Infof(LOGTABLE_DBFT, "CleanEpoch epoch %d", epoch.EpochNo)
 			delete(elc.list, epoch.EpochNo)
 		}
 	}

@@ -1,15 +1,15 @@
 package types
 
 import (
-	"HNB/consensus/algorand/common"
+	"HNB/util"
 )
 
 type CustomTDMHeader struct {
 	*Header       `json:"header"`
-	Evidence      EvidenceData    `json:"evidence"`
-	LastCommit    *Commit         `json:"last_commit"`
-	DataHash      common.HexBytes `json:"dataHash"`
-	ValidatorInfo *ValidatorInfo  `json:"validator_info"`
+	Evidence      EvidenceData   `json:"evidence"`
+	LastCommit    *Commit        `json:"last_commit"`
+	DataHash      util.HexBytes  `json:"dataHash"`
+	ValidatorInfo *ValidatorInfo `json:"validator_info"`
 }
 
 type CustomTDMExt struct {
@@ -17,12 +17,10 @@ type CustomTDMExt struct {
 }
 
 type BlkMaterial struct {
-	//BatchID     []string //交易所在的batchID
 	Height uint64
-	NumTxs uint64 //交易个数，序列化把所有的交易序列化成了一个，所以要记录
+	NumTxs uint64
 	Txs    []Tx
-	Commit *Commit //上一块的commit信息
-	//BitMap      []*apiUtil.Bitmap
+	Commit *Commit
 	Proposer    *Validator
 	BlkVRFValue []byte
 	BlkVRFProof []byte

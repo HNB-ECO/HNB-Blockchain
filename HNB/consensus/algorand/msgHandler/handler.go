@@ -1,8 +1,22 @@
 package msgHandler
 
 import (
+	"HNB/appMgr"
+	appComm "HNB/appMgr/common"
+	"HNB/config"
+	cmn "HNB/consensus/algorand/common"
+	"HNB/consensus/algorand/state"
+	"HNB/consensus/algorand/types"
+	"HNB/ledger"
+	bsComm "HNB/ledger/blockStore/common"
+	"HNB/logging"
+	"HNB/msp"
 	"HNB/p2pNetwork"
+	psync "HNB/sync/common"
+	"HNB/txpool"
+	"HNB/util"
 	"bytes"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -17,20 +31,21 @@ var (
 	ErrAddingVote               = errors.New("Error adding vote")
 	ErrVoteHeightMismatch       = errors.New("Error vote height mismatch")
 )
+
 type TDMMsgHandler struct {
 	cmn.BaseService
-	ID               []byte
-	digestAddr       cmn.HexBytes
-	PeerMsgQueue     chan *cmn.PeerMessage // 共识消息队列
-	InternalMsgQueue chan *cmn.PeerMessage //内部消息队列
-	EventMsgQueue    chan *cmn.PeerMessage //广播到其他节点的消息
-	SyncMsgQueue     chan *cmn.PeerMessage // 同步消息队列
-	ForkSearchMsgQueue chan *cmn.PeerMessage // 分叉点查询消息队列
+	ID                 []byte
+	digestAddr         util.HexBytes
+	PeerMsgQueue       chan *cmn.PeerMessage
+	InternalMsgQueue   chan *cmn.PeerMessage
+	EventMsgQueue      chan *cmn.PeerMessage
+	SyncMsgQueue       chan *cmn.PeerMessage
+	ForkSearchMsgQueue chan *cmn.PeerMessage
 
-	TxsAvailable     chan uint64
-	timeoutTicker    TimeoutTicker
-	doPrevote        func(height uint64, round int32) uint64 //doProvote
-	blockExec        *state.BlockExecutor
+	TxsAvailable  chan uint64
+	timeoutTicker TimeoutTicker
+	doPrevote     func(height uint64, round int32) uint64
+	blockExec     *state.BlockExecutor
 
 	mtx sync.Mutex
 	types.RoundState
@@ -39,17 +54,15 @@ type TDMMsgHandler struct {
 	done             chan struct{}
 	allRoutineExitWg sync.WaitGroup
 	writeBlock       func(blk *bsComm.Block) error
-	//readBlockHeight   func(chainID string) (uint64, error)
 	syncHandler       *SyncHandler
 	recvSyncChan      chan *psync.SyncNotify
-	syncTimer         *time.Timer              // 同步定时器
-	syncTimeout       time.Duration            // 同步超时时间
-	cacheSyncBlkCount map[string]*SyncBlkCount // 缓存同步任务要同步的块数，k-chainId; v-目标同步块数和已完成同步块数;
-	isSyncStatus      *cmn.MutexBool           // 是否同步
-	//IsProposalBroadcast bool
-	IsVoteBroadcast bool
-	heightReq       *HeightReq
-	heightReqOutBg  *HeightReqOutBg
+	syncTimer         *time.Timer
+	syncTimeout       time.Duration
+	cacheSyncBlkCount map[string]*SyncBlkCount
+	isSyncStatus      *cmn.MutexBool
+	IsVoteBroadcast     bool
+	heightReq           *HeightReq
+	heightReqOutBg      *HeightReqOutBg
 	checkFork           *CheckFork
 	forkSearchWorker    *ForkSearchWorker
 	IsContinueConsensus bool
@@ -63,27 +76,43 @@ type TDMMsgHandler struct {
 
 }
 
+const (
+	proposalHeartbeatIntervalSeconds = 2
+	CONSENSUS                        = "CONSENSUS"
+)
+
+var ConsLog logging.LogModule
+
+const (
+	LOGTABLE_CONS string = "consensus"
+)
 
 func NewTDMMsgHandler(lastCommitState state.State) (*TDMMsgHandler, error) {
 	msgHandler := &TDMMsgHandler{
-		timeoutTicker:       NewTimeoutTicker(),
-		PeerMsgQueue:        make(chan *cmn.PeerMessage, msgQueueSize),
-		InternalMsgQueue:    make(chan *cmn.PeerMessage, msgQueueSize),
-		EventMsgQueue:       make(chan *cmn.PeerMessage, msgQueueSize),
-		SyncMsgQueue:        make(chan *cmn.PeerMessage, msgQueueSize),
-		TxsAvailable:        make(chan uint64, 1),
-		done:                make(chan struct{}),
-		syncHandler:         new(SyncHandler),
-		recvSyncChan:        make(chan *psync.SyncNotify, msgQueueSize), //todo 改成专门的接收管道长度
+		timeoutTicker:      NewTimeoutTicker(),
+		PeerMsgQueue:       make(chan *cmn.PeerMessage, msgQueueSize),
+		InternalMsgQueue:   make(chan *cmn.PeerMessage, msgQueueSize),
+		EventMsgQueue:      make(chan *cmn.PeerMessage, msgQueueSize),
+		SyncMsgQueue:       make(chan *cmn.PeerMessage, msgQueueSize),
+		ForkSearchMsgQueue: make(chan *cmn.PeerMessage, msgQueueSize),
+		TxsAvailable:       make(chan uint64, 1),
+		done:               make(chan struct{}),
+		syncHandler:        new(SyncHandler),
+		recvSyncChan:       make(chan *psync.SyncNotify, msgQueueSize), //todo 改成专门的接收管道长度
 
-		IsVoteBroadcast:     false,
-		timeState:           NewTimeStatistic(),
+		IsVoteBroadcast:        false,
+		timeState:              NewTimeStatistic(),
+		consSucceedFuncChain:   make(map[string]func(tdmMsgHander *TDMMsgHandler, blk *types.Block) error),
+		statusUpdatedFuncChain: make(map[string]func(tdmMsgHander *TDMMsgHandler) error),
+		JustStarted:            true,
+		IsContinueConsensus:    true,
 	}
 
 	ConsLog = logging.GetLogIns()
+
 	msgHandler.isSyncStatus = new(cmn.MutexBool)
 	msgHandler.isSyncStatus.SetFalse()
-	msgHandler.cacheSyncBlkCount = make(map[string] *SyncBlkCount)
+	msgHandler.cacheSyncBlkCount = make(map[string]*SyncBlkCount)
 
 	msgHandler.doPrevote = msgHandler.defaultDoPrevote
 
@@ -91,15 +120,11 @@ func NewTDMMsgHandler(lastCommitState state.State) (*TDMMsgHandler, error) {
 
 	msgHandler.ID = msp.GetPeerID()
 
-	pubKeyStr := msp.GetPeerPubStr()
-	digestAddr, err := msp.Hash256(msp.GetPubBytesFromStr(pubKeyStr))
-	if err != nil {
-		return nil, err
-	}
-	msgHandler.digestAddr = cmn.HexBytes(digestAddr)
+	digestAddr := msp.AccountPubkeyToAddress()
 
+	msgHandler.digestAddr = util.HexBytes(digestAddr.GetBytes())
 
-	err = msgHandler.updateToState(lastCommitState)
+	err := msgHandler.updateToState(lastCommitState)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +142,6 @@ func NewTDMMsgHandler(lastCommitState state.State) (*TDMMsgHandler, error) {
 	return msgHandler, nil
 }
 
-
 func (h *TDMMsgHandler) checkTxsAvailable() {
 	h.allRoutineExitWg.Add(1)
 	defer h.allRoutineExitWg.Done()
@@ -125,12 +149,18 @@ func (h *TDMMsgHandler) checkTxsAvailable() {
 	lastHeight := h.Height - 1
 	for {
 		select {
-		case <-txpool.NotifyTx(txpool.HGS):
-			if h.Height > lastHeight {
-				h.TxsAvailable <- h.Height
+		case <-txpool.NotifyTx(appComm.HNB):
 
-				lastHeight = h.Height
-				ConsLog.Infof(LOGTABLE_CONS, "(check txs)txs available, propose h %d", h.Height)
+			if h.Height > lastHeight && h.Step == types.RoundStepNewRound {
+				select {
+				case h.TxsAvailable <- h.Height:
+
+					h.JustStarted = false
+					lastHeight = h.Height
+					ConsLog.Infof(LOGTABLE_CONS, "(check txs)txs available, propose h %d", h.Height)
+				default:
+					ConsLog.Debugf(LOGTABLE_CONS, "(check txs) already deal txs", h.Height)
+				}
 			}
 
 		case <-h.Quit():
@@ -140,6 +170,8 @@ func (h *TDMMsgHandler) checkTxsAvailable() {
 	}
 }
 
+// Reconstruct LastCommit from SeenCommit, which we saved along with the block,
+// (which happens even before saving the state)
 func (h *TDMMsgHandler) reconstructLastCommit(lastCommitState state.State, blk *bsComm.Block) error {
 	if lastCommitState.LastBlockNum == 0 {
 		return nil
@@ -169,7 +201,6 @@ func (h *TDMMsgHandler) reconstructLastCommit(lastCommitState state.State, blk *
 	return nil
 }
 
-
 func (h *TDMMsgHandler) LoadSeenCommit(blkNum uint64, blk *bsComm.Block) (*types.Commit, error) {
 	var err error
 	if blk == nil {
@@ -193,6 +224,7 @@ func (h *TDMMsgHandler) LoadSeenCommit(blkNum uint64, blk *bsComm.Block) (*types
 	return tdmBlk.CurrentCommit, nil
 }
 
+// send a msg into the receiveRoutine regarding our own proposal, block part, or vote
 func (h *TDMMsgHandler) sendInternalMessage(msg *cmn.PeerMessage) {
 	msg.PeerID = p2pNetwork.GetLocatePeerID()
 
@@ -216,26 +248,30 @@ func (h *TDMMsgHandler) BroadcastMsgToAll(msg *cmn.PeerMessage) {
 func (h *TDMMsgHandler) OnStart() error {
 	err := h.timeoutTicker.Start()
 	if err != nil {
+		fmt.Print("进入TDMMsgHandler OnStart（）的ERROR")
 		return err
 	}
+
 	go h.DeliverMsg()
 	go h.BroadcastMsg()
-	go h.checkTxsAvailable()
 	h.stopSyncTimer()
 	go h.Monitor() // add for monitor block height with other peers
 	go h.syncServer()
+	go h.recvForkSearch() // add for recv forksearch msgs
+
 	if h.inbgGroup() {
+		go h.checkTxsAvailable()
+
 		if h.Round == 0 && types.RoundStepNewHeight == h.Step {
-			h.scheduleRound0(h.GetRoundState(), true)
+			h.scheduleRound0(h.GetRoundState())
 		} else {
 			h.setTimeout()
 		}
 	}
+	h.IsContinueConsensus = true
 
 	return nil
 }
-
-
 
 func (h *TDMMsgHandler) setTimeout() {
 	switch h.Step {
@@ -267,7 +303,7 @@ func (h *TDMMsgHandler) dealNewRound() {
 	timeoutWaitFortx := config.Config.ConsensusConfig.TimeoutWaitFortx
 	if waitForTxs {
 		h.timeState.EndConsumeTime(h)
-		if txpool.TxsLen(txpool.HGS) > 0 {
+		if txpool.IsTxsLenZero(appComm.HNB) == false {
 			h.enterPropose(h.Height, h.Round)
 		} else {
 			h.scheduleTimeout(h.AddTimeOut(timeoutWaitFortx), h.Height, h.Round, types.RoundStepNewRound)
@@ -284,7 +320,6 @@ func (h *TDMMsgHandler) dealNewRound() {
 
 func (h *TDMMsgHandler) inbgGroup() bool {
 	for _, val := range h.Validators.Validators {
-		//ConsLog.Infof(LOGTABLE_CONS, "inbgGroup %s %s", val.Address, h.digestAddr)
 		if bytes.Equal(val.Address, h.digestAddr) {
 			return true
 		}
@@ -292,52 +327,48 @@ func (h *TDMMsgHandler) inbgGroup() bool {
 
 	return false
 }
+
 func (h *TDMMsgHandler) isPeerInbgGroup(pubKeyID []byte) bool {
-334         for _, val := range h.Validators.Validators {
-335                 if bytes.Equal(val.Address, h.digestAddr) {
-336                         return true
-337                 }
-338 
-339         }
-340 
-341         return false
-342 }
-343 
-348 func (h *TDMMsgHandler) OnStop() { 
-350         h.timeoutTicker.Stop()
-351 }
+	for _, val := range h.Validators.Validators {
+		if bytes.Equal(val.Address, h.digestAddr) {
+			return true
+		}
 
-354 func (h *TDMMsgHandler) OnReset() error {
-356         h.PeerMsgQueue = make(chan *cmn.PeerMessage, msgQueueSize)
-357         h.InternalMsgQueue = make(chan *cmn.PeerMessage, msgQueueSize)
-358         h.EventMsgQueue = make(chan *cmn.PeerMessage, msgQueueSize)
-359         h.TxsAvailable = make(chan uint64, 1)
-360         h.done = make(chan struct{})
-361         
-362         h.recvSyncChan = make(chan *psync.SyncNotify, msgQueueSize)
-363 
-365         h.isSyncStatus.SetFalse()
-366         h.stopSyncTimer()
-369         h.updateRoundStep(h.Round, types.RoundStepNewRound)
-371         h.timeoutTicker.Reset()
-372 
-373         return nil
-374 }
-375 
-376 func (h *TDMMsgHandler) String() string {
-377         return cmn.Fmt("tdmMsgHandler{tdm cons service}")
-378 }
+	}
 
+	return false
+}
+
+func (h *TDMMsgHandler) OnStop() {
+	h.timeoutTicker.Stop()
+}
+
+func (h *TDMMsgHandler) OnReset() error {
+	h.PeerMsgQueue = make(chan *cmn.PeerMessage, msgQueueSize)
+	h.InternalMsgQueue = make(chan *cmn.PeerMessage, msgQueueSize)
+	h.EventMsgQueue = make(chan *cmn.PeerMessage, msgQueueSize)
+	h.TxsAvailable = make(chan uint64, 1)
+	h.done = make(chan struct{})
+
+	h.recvSyncChan = make(chan *psync.SyncNotify, msgQueueSize)
+	h.isSyncStatus.SetFalse()
+	h.stopSyncTimer()
+	h.updateRoundStep(h.Round, types.RoundStepNewRound)
+	h.timeoutTicker.Reset()
+
+	return nil
+}
 
 func (h *TDMMsgHandler) String() string {
 	return cmn.Fmt("tdmMsgHandler{tdm cons service}")
 }
 
-func (h *TDMMsgHandler) scheduleRound0(rs *types.RoundState, justStarted bool) {
+// new round after start
+func (h *TDMMsgHandler) scheduleRound0(rs *types.RoundState) {
 	timeoutNewRound := config.Config.TimeoutNewRound
-	if justStarted{
+	if h.JustStarted {
 		h.scheduleTimeout(h.AddTimeOut(timeoutNewRound), rs.Height, 0, types.RoundStepNewHeight)
-	}else{
+	} else {
 		h.enterNewRound(rs.Height, 0)
 	}
 }
@@ -349,6 +380,7 @@ func (h *TDMMsgHandler) saveBlock(block *types.Block, s *state.State) (*state.St
 	if err != nil {
 		return nil, err
 	}
+
 	s.PreviousHash, err = ledger.CalcBlockHash(blk)
 	if err != nil {
 		return nil, err
@@ -359,7 +391,7 @@ func (h *TDMMsgHandler) saveBlock(block *types.Block, s *state.State) (*state.St
 	h.timeState.SetHeight(block.BlockNum)
 	h.timeState.SetRound(h.Round)
 
-	txpool.DelTxs(txpool.HGS, blk.Txs)
+	txpool.DelTxs(appComm.HNB, blk.Txs)
 	ConsLog.Infof(LOGTABLE_CONS, "save blk successful")
 
 	return s, nil
@@ -370,10 +402,6 @@ func (h *TDMMsgHandler) getHeightFromLedger() uint64 {
 	return height
 }
 
-
-
-
-// 从内存和块里获取vals
 func (h *TDMMsgHandler) LoadLastCommitStateFromBlkAndMem(newBlk *bsComm.Block) (*state.State, error) {
 	if newBlk.Header.BlockNum == 0 {
 		return nil, errors.New("can not be num 0")
@@ -401,12 +429,10 @@ func (h *TDMMsgHandler) LoadLastCommitStateFromBlkAndMem(newBlk *bsComm.Block) (
 		LastHeightValidatorsChanged: tdmBlk.LastHeightChanged,
 		PrevVRFValue:                tdmBlk.BlkVRFValue,
 		PrevVRFProof:                tdmBlk.BlkVRFProof,
-
 	}, nil
 
 }
 
-// 都从块里获取vals
 func (h *TDMMsgHandler) LoadLastCommitStateFromBlk(block *bsComm.Block) (*state.State, error) {
 	tdmBlk, err := types.Standard2Cons(block)
 	if err != nil {
@@ -420,11 +446,11 @@ func (h *TDMMsgHandler) LoadLastCommitStateFromBlk(block *bsComm.Block) (*state.
 
 	var lastValidators *types.ValidatorSet
 	if block.Header.BlockNum == 0 {
-		lastValidators = types.NewValidatorSet(nil, 0, nil, nil)
+		lastValidators = types.NewValidatorSet(nil, 0, nil, nil, nil)
 	} else {
 		prevBlk, err := ledger.GetBlock(block.Header.BlockNum - 1)
 		if prevBlk == nil {
-			return nil, fmt.Errorf("tdm get last blk %d nil %v", block.Header.BlockNum - 1, err)
+			return nil, fmt.Errorf("tdm get last blk %d nil %v", block.Header.BlockNum-1, err)
 		}
 
 		if err != nil {
@@ -455,7 +481,6 @@ func (h *TDMMsgHandler) LoadLastCommitStateFromBlk(block *bsComm.Block) (*state.
 	}, nil
 }
 
-
 func (h *TDMMsgHandler) AddTimeOut(timeout int) time.Duration {
 	var timer int32 = 3
 	if h.Round > timer {
@@ -475,4 +500,71 @@ func (h *TDMMsgHandler) WaitForTxsNil() bool {
 
 func (h *TDMMsgHandler) Commit(t time.Time) time.Time {
 	return t.Add(time.Duration(config.Config.TimeoutCommit) * time.Millisecond)
-}  
+}
+
+func (h *TDMMsgHandler) LoadLastCommitStateFromCurHeight() (*state.State, error) {
+	curH, err := ledger.GetBlockHeight()
+
+	if err != nil {
+		return nil, err
+	}
+
+	ConsLog.Infof(LOGTABLE_CONS, "(LoadLastCommitStateFromCurHeight) curH=%v", curH)
+
+	blk, err := ledger.GetBlock(curH - 1)
+	if err != nil {
+		return nil, err
+	}
+
+	if blk == nil {
+		return nil, fmt.Errorf("blk %d is nil", curH-1)
+	}
+
+	lastCommitState, err := h.LoadLastCommitStateFromBlk(blk)
+	if err != nil {
+		return nil, err
+	}
+
+	return lastCommitState, nil
+}
+
+// load validator from block
+func (h *TDMMsgHandler) LoadValidators(blk *bsComm.Block) (curVal *types.ValidatorSet, err error) {
+	tdmBlk, err := types.Standard2Cons(blk)
+	valLastHeightChanged := tdmBlk.LastHeightChanged
+	if err != nil {
+		return nil, err
+	}
+
+	curVal = tdmBlk.Validators
+	if curVal == nil {
+		lastValidatorChangeHeightBlk, err := ledger.GetBlock(valLastHeightChanged)
+		if err != nil {
+			ConsLog.Errorf(LOGTABLE_CONS, "tdm get blk %d err %v", valLastHeightChanged, err)
+			return nil, err
+		}
+
+		if lastValidatorChangeHeightBlk == nil {
+			ConsLog.Errorf(LOGTABLE_CONS, "blk %d is nil", valLastHeightChanged)
+			return nil, fmt.Errorf(" blk %d is nil", valLastHeightChanged)
+		}
+
+		lastTdmBlk, err := types.Standard2Cons(lastValidatorChangeHeightBlk)
+		if err != nil {
+			ConsLog.Errorf(LOGTABLE_CONS, "tdm get blk %d err %v", valLastHeightChanged, err)
+			return nil, err
+		}
+
+		if lastTdmBlk.Validators == nil {
+			return nil, fmt.Errorf("%d load validators err", valLastHeightChanged)
+		}
+
+		curVal = lastTdmBlk.Validators
+	}
+
+	return curVal, nil
+}
+
+func (h *TDMMsgHandler) GetDigestAddr() util.HexBytes {
+	return h.digestAddr
+}

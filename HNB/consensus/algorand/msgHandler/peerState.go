@@ -1,17 +1,17 @@
 package msgHandler
 
 import (
+	cmn "HNB/consensus/algorand/common"
+	"HNB/consensus/algorand/types"
 	"fmt"
 	"sync"
 	"time"
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/types"
 )
 
 // PeerState contains the known state of a peer, including its connection and
 // threadsafe access to its PeerRoundState.
 type PeerState struct {
-	mtx    sync.Mutex
+	mtx sync.Mutex
 	types.PeerRoundState
 	stats *peerStateStats
 }
@@ -391,7 +391,6 @@ func (ps *PeerState) ApplyProposalPOLMessage(msg *cmn.ProposalPOLMessage) {
 	}
 	ps.ProposalPOL = bitArray
 }
-
 
 // String returns a string representation of the PeerState
 func (ps *PeerState) String() string {

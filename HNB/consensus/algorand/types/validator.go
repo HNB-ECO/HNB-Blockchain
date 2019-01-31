@@ -2,8 +2,9 @@ package types
 
 import (
 	"HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/merkle"
+	"HNB/ledger/merkle"
 	"HNB/msp"
+	"HNB/util"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -15,7 +16,7 @@ import (
 type ValidatorsByAddress []*Validator
 
 type Validator struct {
-	Address Address `json:"address"`
+	Address `json:"address"`
 	//PubKey      PubKey         `json:"pub_key"`
 	PubKeyStr   string `json:"pub_key_str"`
 	VotingPower int64  `json:"voting_power"`
@@ -105,10 +106,11 @@ type ValidatorSet struct {
 	BgVRFValue []byte `json:"vrf_value"`
 	BgVRFProof []byte `json:"vrf_proof"`
 	// cached (unexported)
+	Extend           []byte `json:"extend"`
 	totalVotingPower int64
 }
 
-func NewValidatorSet(vals []*Validator, bgID uint64, BgVRFValue, BgVRFProof []byte) *ValidatorSet {
+func NewValidatorSet(vals []*Validator, bgID uint64, BgVRFValue, BgVRFProof []byte, extend []byte) *ValidatorSet {
 	validators := make([]*Validator, len(vals))
 	for i, val := range vals {
 		validators[i] = val.Copy()
@@ -119,6 +121,7 @@ func NewValidatorSet(vals []*Validator, bgID uint64, BgVRFValue, BgVRFProof []by
 		BgID:       bgID,
 		BgVRFValue: BgVRFValue,
 		BgVRFProof: BgVRFProof,
+		Extend:     extend,
 	}
 
 	if vals != nil {
@@ -144,6 +147,7 @@ func (valSet *ValidatorSet) IncrementAccum(times int32) {
 	validatorsHeap := common.NewHeap()
 
 	for _, val := range valSet.Validators {
+		//fmt.Printf("addr:%v\n",val)
 		val.Accum = safeAddClip(val.Accum, safeMulClip(val.VotingPower, int64(times)))
 		validatorsHeap.PushComparable(val, accumComparable{val})
 	}
@@ -174,6 +178,7 @@ func (valSet *ValidatorSet) Copy() *ValidatorSet {
 		BgID:             valSet.BgID,
 		BgVRFValue:       valSet.BgVRFValue,
 		BgVRFProof:       valSet.BgVRFProof,
+		Extend:           valSet.Extend,
 	}
 }
 
@@ -195,6 +200,15 @@ func (valSet *ValidatorSet) GetByAddress(address []byte) (index int, val *Valida
 	if idx < len(valSet.Validators) && bytes.Equal(valSet.Validators[idx].Address, address) {
 		return idx, valSet.Validators[idx].Copy()
 	}
+
+	//var p string
+	//for _, v := range valSet.Validators{
+	//	validator := msp.ByteToHex(v.Address)
+	//	p = fmt.Sprintf("%s validator:%s", p, validator)
+	//
+	//}
+	//pr := fmt.Sprintf("%s addr %v", p, msp.ByteToHex(address))
+	//panic(pr)
 	return -1, nil
 }
 
@@ -392,8 +406,8 @@ func (valSet *ValidatorSet) StringIndented(indent string) string {
 		indent,
 		indent, strings.Join(valStrings, "\n"+indent+"    "),
 		indent, valSet.BgID,
-		indent, common.HexBytes(valSet.BgVRFValue),
-		indent, common.HexBytes(valSet.BgVRFProof),
+		indent, util.HexBytes(valSet.BgVRFValue),
+		indent, util.HexBytes(valSet.BgVRFProof),
 		indent)
 
 }
@@ -552,7 +566,7 @@ func (valSet *ValidatorSet) VerifyVoteSign(vote *Vote) error {
 
 	_, val := valSet.GetByIndex(vote.ValidatorIndex)
 
-	valid, err := msp.Verify(msp.GetBccspKeyFromPubKey(val.PubKeyStr), vote.Signature, voteBytes)
+	valid, err := msp.Verify(msp.StringToBccspKey(val.PubKeyStr), vote.Signature, voteBytes)
 	if err != nil {
 		return err
 	}
@@ -562,4 +576,14 @@ func (valSet *ValidatorSet) VerifyVoteSign(vote *Vote) error {
 	}
 
 	return nil
+}
+
+func (valSet *ValidatorSet) GetByPeerID(peerID []byte) (index int, val *Validator) {
+	for index, val := range valSet.Validators {
+		if msp.PeerIDToString(peerID) == val.PubKeyStr {
+			return index, val
+		}
+	}
+
+	return -1, nil
 }

@@ -1,11 +1,11 @@
 package types
 
 import (
+	"HNB/ledger/merkle"
+	"HNB/msp"
 	"bytes"
 	"errors"
 	"fmt"
-	"HNB/consensus/algorand/merkle"
-	"HNB/msp"
 )
 
 // Tx is an arbitrary byte array.

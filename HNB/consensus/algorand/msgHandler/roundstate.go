@@ -1,28 +1,33 @@
 package msgHandler
 
 import (
-	"fmt"
-	"HNB/p2pNetwork/message/reqMsg"
-	"time"
-	"HNB/consensus/algorand/types"
 	cmn "HNB/consensus/algorand/common"
 	"HNB/consensus/algorand/state"
-	"encoding/json"
+	"HNB/consensus/algorand/types"
+	"HNB/consensus/consensusManager/comm/consensusType"
 	"HNB/p2pNetwork"
+	"HNB/p2pNetwork/message/reqMsg"
+	"encoding/json"
+	"fmt"
+	"time"
 )
 
+// GetRoundState returns a shallow copy of the internal consensus state.
 func (h *TDMMsgHandler) GetRoundState() *types.RoundState {
 	h.mtx.Lock()
 	defer h.mtx.Unlock()
 
-	rs := h.RoundState
+	rs := h.RoundState // copy
 	return &rs
 }
 
+//------------------------------------------------------------
+// internal functions for managing the state
 func (h *TDMMsgHandler) updateNextBlkNum(nextBlkNum uint64) {
 	h.Height = nextBlkNum
 }
 
+//update round step
 func (h *TDMMsgHandler) updateRoundStep(round int32, step types.RoundStepType) {
 	h.Round = round
 	h.Step = step
@@ -61,8 +66,12 @@ func (h *TDMMsgHandler) updateToState(state state.State) error {
 		lastPrecommits = h.Votes.Precommits(h.CommitRound)
 	}
 
+	// 期望下一次块号
 	nextBlkNum := state.LastBlockNum + 1
+
+	//更新期望的块号
 	h.updateNextBlkNum(nextBlkNum)
+	//初始化轮次和状态
 	h.updateRoundStep(0, types.RoundStepNewHeight)
 
 	if h.CommitTime.IsZero() {
@@ -76,6 +85,7 @@ func (h *TDMMsgHandler) updateToState(state state.State) error {
 	h.ProposalBlock = nil
 	h.ProposalBlockParts = nil
 	h.Votes = types.NewBlkNumVoteSet(nextBlkNum, validators)
+
 	h.CommitRound = -1
 	h.LastCommit = lastPrecommits
 	h.LastValidators = state.LastValidators
@@ -86,4 +96,64 @@ func (h *TDMMsgHandler) updateToState(state state.State) error {
 	}
 
 	return nil
+}
+
+func (h *TDMMsgHandler) getcurrentPrecommits() *types.VoteSet {
+	lastPrecommits := (*types.VoteSet)(nil)
+	if h.CommitRound > -1 && h.Votes != nil {
+		if !h.Votes.Precommits(h.CommitRound).HasTwoThirdsMajority() {
+			cmn.PanicSanity("updateToState(state) called but last Precommit round didn't have +2/3")
+		}
+		lastPrecommits = h.Votes.Precommits(h.CommitRound)
+	}
+	return lastPrecommits
+}
+
+func (h *TDMMsgHandler) newStep() {
+	return
+}
+
+func (h *TDMMsgHandler) broadcastNewRoundStep(nrsMsg *cmn.NewRoundStepMessage) {
+	nrsData, err := json.Marshal(nrsMsg)
+	if err != nil {
+		ConsLog.Errorf(LOGTABLE_CONS, "marshal nrsMsg err %v", err)
+		return
+	}
+
+	tdmMsg := &cmn.TDMMessage{
+		Payload: nrsData,
+		Type:    cmn.TDMType_MsgNewRoundStep,
+	}
+	tdmMsgSign, err := h.Sign(tdmMsg)
+	if err != nil {
+		ConsLog.Errorf(LOGTABLE_CONS, "sign tdmMsg err %v", err)
+		return
+	}
+
+	//tdmData, err := proto.Marshal(tdmMsg)
+	tdmData, err := json.Marshal(tdmMsgSign)
+	if err != nil {
+		ConsLog.Errorf(LOGTABLE_CONS, "marshal tdmMsg err %v", err)
+		return
+	}
+	conMsg := &consensusType.ConsensusMsg{
+		Type:    int(consensusType.Tendermint),
+		Payload: tdmData,
+	}
+
+	conData, err := json.Marshal(conMsg)
+	if err != nil {
+		return
+	}
+	p2pNetwork.Xmit(reqMsg.NewConsMsg(conData), true)
+}
+
+func (h *TDMMsgHandler) makeNewRoundStepMessage(rs types.RoundState) *cmn.NewRoundStepMessage {
+	return &cmn.NewRoundStepMessage{
+		Height:                rs.Height,
+		Round:                 rs.Round,
+		Step:                  uint32(rs.Step),
+		SecondsSinceStartTime: uint32(time.Since(rs.StartTime).Seconds()),
+		LastCommitRound:       rs.LastCommit.Round(),
+	}
 }

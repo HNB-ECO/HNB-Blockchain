@@ -8,7 +8,6 @@ import (
 
 const (
 	VP                 = "1"
-	KEYTYPE_MEMBERSHIP = "membership"
 )
 
 func LoadTotalValidators() ([]*types.Validator, error) {

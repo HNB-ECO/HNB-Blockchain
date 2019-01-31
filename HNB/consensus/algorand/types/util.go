@@ -4,16 +4,18 @@ import (
 	"HNB/bccsp"
 	"HNB/bccsp/sw"
 	"HNB/common"
+	"HNB/ledger"
 	bsComm "HNB/ledger/blockStore/common"
 	"HNB/msp"
+	"HNB/util"
 	"crypto/elliptic"
 	"encoding/json"
+	"github.com/json-iterator/go"
 	"github.com/tendermint/go-amino"
 )
 
 var Codec = amino.NewCodec()
 
-// todo 这里需要加上支持的公私钥具体类型
 func init() {
 	Codec.RegisterInterface((*PubKey)(nil), nil)
 	Codec.RegisterInterface((*bccsp.Key)(nil), nil)
@@ -21,11 +23,6 @@ func init() {
 	Codec.RegisterConcrete(&elliptic.CurveParams{}, "bccsp/CurveParams", nil)
 	Codec.RegisterConcrete(&sw.EcdsaPublicKey{}, "bccsp/ECDSAPublicKey", nil)
 	Codec.RegisterConcrete(&sw.EcdsaPrivateKey{}, "bccsp/ECDSAPrivateKey", nil)
-	//Codec.RegisterConcrete(&bccsp.ECDSAPublicKey{}, "bccsp/ECDSAPublicKey", nil)
-	//Codec.RegisterConcrete(&bccsp.ECDSAPrivateKey{}, "bccsp/ECDSAPrivateKey", nil)
-	//Codec.RegisterConcrete(&bccsp.SM2PublicKey{}, "bccsp/SM2PublicKey", nil)
-	//Codec.RegisterConcrete(&bccsp.SM2PrivateKey{}, "bccsp/SM2PrivateKey", nil)
-
 }
 
 func ConsToStandard(block *Block) (*bsComm.Block, error) {
@@ -67,15 +64,15 @@ func ConsToStandard(block *Block) (*bsComm.Block, error) {
 		}
 	}
 
-	//todo 需要计算默克尔数Hash
-	txsHash, err := CalcTxsHash(uniformTxs)
+	hasher, err := MakeHasher(uniformTxs)
 	if err != nil {
 		return nil, err
 	}
+	txsHash := ledger.CalcHashRoot(hasher)
 
 	var proposer *Validator
 	if block.BlockNum != 0 {
-		proposer = block.Proposer
+		proposer = block.Validators.Proposer
 	} else {
 		proposer = &Validator{}
 	}
@@ -87,9 +84,8 @@ func ConsToStandard(block *Block) (*bsComm.Block, error) {
 		ConsArgs:     customHeaderData,
 		Ext:          CustomTDMExtData,
 		TxsHash:      txsHash,
-		SenderId:     proposer.Address,
+		SenderId:     util.HexBytes(proposer.Address),
 	}
-
 	retBlk := &bsComm.Block{
 		Header: header,
 		Txs:    uniformTxs,
@@ -98,7 +94,6 @@ func ConsToStandard(block *Block) (*bsComm.Block, error) {
 	return retBlk, nil
 }
 
-// 计算交易集的hash
 func CalcTxsHash(txs []*common.Transaction) ([]byte, error) {
 	txsBytes, err := json.Marshal(txs)
 	if err != nil {
@@ -106,6 +101,22 @@ func CalcTxsHash(txs []*common.Transaction) ([]byte, error) {
 	}
 
 	return msp.Hash256(txsBytes)
+}
+
+func MakeHasher(txs []*common.Transaction) ([][]byte, error) {
+	hasher := make([][]byte, 0)
+	for _, tx := range txs {
+		txBytes, err := json.Marshal(tx)
+		if err != nil {
+			return nil, err
+		}
+		hash, err := msp.Hash256(txBytes)
+		if err != nil {
+			return nil, err
+		}
+		hasher = append(hasher, hash)
+	}
+	return hasher, nil
 }
 
 func Standard2Cons(blk *bsComm.Block) (block *Block, err error) {
@@ -171,4 +182,15 @@ func Tx2TDMTx(uniformTxs []*common.Transaction) ([]Tx, error) {
 	}
 
 	return tdmTxs, nil
+}
+
+func BuildNetTxsFromTDMTxs(tdmTxs []Tx) ([]*common.Transaction, error) {
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
+	uniformTxs := make([]*common.Transaction, 0)
+	err := json.Unmarshal(tdmTxs[0], &uniformTxs)
+	if err != nil {
+		return nil, err
+	}
+
+	return uniformTxs, nil
 }

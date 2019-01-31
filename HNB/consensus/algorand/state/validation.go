@@ -8,7 +8,6 @@ import (
 	"HNB/consensus/algorand/types"
 )
 
-// 验证区块
 func ValidateBlock(s State, b *types.Block) error {
 
 	if err := b.ValidateBasic(); err != nil {
@@ -19,14 +18,13 @@ func ValidateBlock(s State, b *types.Block) error {
 		return fmt.Errorf("Wrong Block.Header.BlockNum. Expected %v, got %v", s.LastBlockNum+1, b.BlockNum)
 	}
 
-	// 验证上个区块的信息
 	if !b.LastBlockID.Equals(s.LastBlockID) {
 		return fmt.Errorf("Wrong Block.Header.LastBlockID.  Expected %v, got %v", s.LastBlockID, b.LastBlockID)
 	}
 	newTxs := int64(len(b.Data.Txs))
 
-	if b.TotalTxs != s.LastBlockTotalTx + newTxs {
-		return fmt.Errorf("Wrong Block.Header.TotalTxs. Expected %v, got %v", s.LastBlockTotalTx + newTxs, b.TotalTxs)
+	if b.TotalTxs != s.LastBlockTotalTx+newTxs {
+		return fmt.Errorf("Wrong Block.Header.TotalTxs. Expected %v, got %v", s.LastBlockTotalTx+newTxs, b.TotalTxs)
 	}
 
 	if !bytes.Equal(b.ConsensusHash, s.ConsensusParams.Hash()) {
@@ -38,7 +36,6 @@ func ValidateBlock(s State, b *types.Block) error {
 			"s.validators %v b.validators %v b.valLastHeightChanged %v", s.Validators.Hash(), b.ValidatorsHash, s.Validators, b.Validators, b.LastHeightChanged)
 	}
 
-	// 验证块LAST提交。
 	if b.BlockNum == 1 {
 		if len(b.LastCommit.Precommits) != 0 {
 			return errors.New("Block at height 1 (first block) should have no LastCommit precommits")
@@ -48,7 +45,7 @@ func ValidateBlock(s State, b *types.Block) error {
 			return fmt.Errorf("Invalid block commit size. Expected %v, got %v",
 				s.LastValidators.Size(), len(b.LastCommit.Precommits))
 		}
-		err := s.LastValidators.VerifyCommitVoteSign(b.BlockNum - 1, b.LastCommit)
+		err := s.LastValidators.VerifyCommitVoteSign(b.BlockNum-1, b.LastCommit)
 		if err != nil {
 			fmt.Println("validate vote signature err ", err)
 			//return err

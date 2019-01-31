@@ -1,16 +1,17 @@
 package types
 
 import (
+	cmn "HNB/consensus/algorand/common"
+	"HNB/ledger/merkle"
+	"HNB/msp"
+	"HNB/util"
 	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/merkle"
-	"strconv"
-	"HNB/msp"
 )
 
 // Block defines the atomic unit of a Tendermint blockchain.
@@ -56,14 +57,13 @@ func (b *Block) ValidateBasic() error {
 	}
 	b.mtx.Lock()
 	defer b.mtx.Unlock()
-	if b.Data != nil { //添加了判断
+	if b.Data != nil {
 		newTxs := int64(len(b.Data.Txs))
 		if b.NumTxs != newTxs {
 			return fmt.Errorf("Wrong Block.Header.NumTxs. Expected %v, got %v", newTxs, b.NumTxs)
 		}
 	}
 
-	//比较前块Hash是否正确
 	if !bytes.Equal(b.LastCommitHash, b.LastCommit.Hash()) {
 		return fmt.Errorf("Wrong Block.Header.LastCommitHash.  Expected %v, got %v", b.LastCommitHash, b.LastCommit.Hash())
 	}
@@ -98,7 +98,7 @@ func (b *Block) fillHeader() {
 
 // Hash computes and returns the block hash.
 // If the block is incomplete, block hash is nil for safety.
-func (b *Block) Hash() cmn.HexBytes {
+func (b *Block) Hash() util.HexBytes {
 	if b == nil {
 		return nil
 	}
@@ -188,20 +188,20 @@ type Header struct {
 	TotalTxs    int64   `json:"total_txs"`
 
 	// hashes of block data
-	LastCommitHash cmn.HexBytes `json:"last_commit_hash"` // commit from validators from the last block
-	DataHash       cmn.HexBytes `json:"data_hash"`        // transactions
+	LastCommitHash util.HexBytes `json:"last_commit_hash"` // commit from validators from the last block
+	DataHash       util.HexBytes `json:"data_hash"`        // transactions
 
 	// hashes from the app output from the prev block
-	ValidatorsHash  cmn.HexBytes `json:"validators_hash"`   // validators for the current block
-	ConsensusHash   cmn.HexBytes `json:"consensus_hash"`    // consensus params for current block
-	AppHash         cmn.HexBytes `json:"app_hash"`          // state after txs from the previous block
-	LastResultsHash cmn.HexBytes `json:"last_results_hash"` // root hash of all results from the txs from the previous block
+	ValidatorsHash  util.HexBytes `json:"validators_hash"`   // validators for the current block
+	ConsensusHash   util.HexBytes `json:"consensus_hash"`    // consensus params for current block
+	AppHash         util.HexBytes `json:"app_hash"`          // state after txs from the previous block
+	LastResultsHash util.HexBytes `json:"last_results_hash"` // root hash of all results from the txs from the previous block
 
 	// VRF
-	BlkVRFValue cmn.HexBytes `json:"vrf_value"`
-	BlkVRFProof cmn.HexBytes `json:"vrf_proof"`
+	BlkVRFValue util.HexBytes `json:"vrf_value"`
+	BlkVRFProof util.HexBytes `json:"vrf_proof"`
 	// consensus info
-	EvidenceHash cmn.HexBytes `json:"evidence_hash"` // evidence included in the block
+	EvidenceHash util.HexBytes `json:"evidence_hash"` // evidence included in the block
 
 }
 
@@ -214,7 +214,7 @@ func (h *Header) Hash() []byte {
 		return nil
 	}
 	return merkle.SimpleHashFromMap(map[string]merkle.Hasher{
-		"BlockNum":      aminoHasher(h.BlockNum),
+		"BlockNum":    aminoHasher(h.BlockNum),
 		"Time":        aminoHasher(h.Time),
 		"NumTxs":      aminoHasher(h.NumTxs),
 		"TotalTxs":    aminoHasher(h.TotalTxs),
@@ -277,7 +277,7 @@ type Data struct {
 	Txs Txs `json:"txs"`
 
 	// Volatile
-	hash cmn.HexBytes
+	hash util.HexBytes
 }
 
 // Hash returns the hash of the data
@@ -318,11 +318,11 @@ type EvidenceData struct {
 	Evidence EvidenceList `json:"evidence"`
 
 	// Volatile
-	hash cmn.HexBytes
+	hash util.HexBytes
 }
 
 // Hash returns the hash of the data.
-func (data *EvidenceData) Hash() cmn.HexBytes {
+func (data *EvidenceData) Hash() util.HexBytes {
 	if data.hash == nil {
 		data.hash = data.Evidence.Hash()
 	}
@@ -354,7 +354,7 @@ func (data *EvidenceData) StringIndented(indent string) string {
 type ValidatorInfo struct {
 	Validators        *ValidatorSet
 	LastHeightChanged uint64
-	Proposer          *Validator
+	//Proposer          *Validator
 }
 
 //--------------------------------------------------------------------------------
@@ -370,11 +370,10 @@ type Commit struct {
 
 	// Volatile
 	firstPrecommit *Vote
-	hash           cmn.HexBytes
+	hash           util.HexBytes
 	bitArray       *cmn.BitArray
 }
 
-// 返回投票集共识组成员下标形式，0-1-2
 func (commit *Commit) PreCommitVP() string {
 	strSlice := make([]string, len(commit.Precommits))
 	for i, preCommit := range commit.Precommits {
@@ -494,7 +493,7 @@ func (commit *Commit) ValidateBasic() error {
 }
 
 // Hash returns the hash of the commit
-func (commit *Commit) Hash() cmn.HexBytes {
+func (commit *Commit) Hash() util.HexBytes {
 	//fmt.Print(111111111)
 	if commit.hash == nil {
 		bs := make([]merkle.Hasher, len(commit.Precommits))

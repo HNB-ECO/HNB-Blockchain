@@ -1,9 +1,9 @@
 package msgHandler
 
 import (
-	"time"
 	cmn "HNB/consensus/algorand/common"
 	"HNB/consensus/algorand/types"
+	"time"
 )
 
 var (
@@ -103,7 +103,7 @@ func (t *timeoutTicker) timeoutRoutine() {
 	for {
 		select {
 		case newti := <-t.tickChan:
-		//	t.Logger.Debug("Received tick", "old_ti", ti, "new_ti", newti)
+			//	t.Logger.Debug("Received tick", "old_ti", ti, "new_ti", newti)
 
 			// ignore tickers for old height/round/step
 			if newti.Height < ti.Height {
