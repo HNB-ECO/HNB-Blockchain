@@ -1,12 +1,12 @@
 package blockStore
 
 import (
+	dbComm "HNB/db/common"
+	"HNB/ledger/blockStore/common"
+	"HNB/logging"
+	"HNB/msp"
 	"encoding/binary"
 	"encoding/json"
-	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 )
 
 type BlockStore struct {

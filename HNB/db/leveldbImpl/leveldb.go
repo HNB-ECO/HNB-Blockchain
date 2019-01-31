@@ -1,12 +1,12 @@
 package leveldbImpl
 
 import (
+	"HNB/db/common"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"HNB/db/common"
 )
 
 type LevelDBStore struct {
@@ -96,4 +96,3 @@ func (self *LevelDBStore) NewIterator(prefix []byte) common.Iterator {
 		iter: iter,
 	}
 }
-

@@ -1,8 +1,8 @@
 package util
 
 import (
-	"time"
 	"strconv"
+	"time"
 )
 
 func GetCurrentMillisecond() uint64 {
@@ -16,4 +16,3 @@ func GetCurrentTimestampString() string {
 func GetCurrentUnixNano() uint64 {
 	return uint64(time.Now().UnixNano())
 }
-

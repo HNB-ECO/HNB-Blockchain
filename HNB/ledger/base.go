@@ -1,8 +1,8 @@
 package ledger
 
 import (
+	ssComm "HNB/ledger/stateStore/common"
 	"encoding/binary"
-	ssComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore/common"
 )
 
 var ledgerHeight uint64 = 0
@@ -21,12 +21,6 @@ func GetStateSet(key []byte) *ssComm.StateSet {
 }
 
 func SetBlockHeight(height uint64) error {
-	//b := make([]byte, 8)
-	//binary.BigEndian.PutUint64(b, i)
-	//
-	//fmt.Println(b[:])
-	//
-	//i = uint64(binary.BigEndian.Uint64(b))
 	defer func() {
 		ledgerHeight = height
 		LedgerLog.Infof(LOGTABLE_LEDGER, "set block height %v", height)

@@ -1,13 +1,15 @@
 package txpool
 
 import (
+	"HNB/common"
+	"HNB/logging"
+	"HNB/p2pNetwork"
 	"fmt"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
 	"github.com/pkg/errors"
 	//"HNB/p2pNetwork/message/reqMsg"
 	//"encoding/json"
+	"HNB/p2pNetwork/message/reqMsg"
+	"encoding/json"
 )
 
 var TXPoolLog logging.LogModule
@@ -16,8 +18,8 @@ var TxPoolIns *TXPoolServer
 
 const (
 	LOGTABLE_TXPOOL string = "txpool"
-	HGS             string = "hgs"
-	HNB             string = "hnb"
+	//HGS             string = "hgs"
+	//HNB             string = "hnb"
 )
 
 type TXPoolServer struct {
@@ -51,9 +53,13 @@ func (tps *TXPoolServer) RecvTx(msg []byte, msgSender uint64) error {
 	if msgSender == 0 { //local
 		m := reqMsg.NewTxMsg(msg)
 		p2pNetwork.Xmit(m, false)
-		tps.txpool.AddLocal(&tx)
+		err = tps.txpool.AddLocal(&tx)
 	} else {
-		tps.txpool.AddRemote(&tx)
+		err = tps.txpool.AddRemote(&tx)
+	}
+
+	if err != nil{
+		return err
 	}
 
 	infoStr := fmt.Sprintf("recv tx  %v", string(msg))
@@ -99,7 +105,14 @@ func (tps *TXPoolServer) Start() {
 }
 
 func (tps *TXPoolServer) DelTxs(chainId string, txs []*common.Transaction) {
-	tps.txpool.recvBlkTxs <- txs
+	resChan := make(chan struct{})
+	dbt := &DelBlkTxs{}
+	dbt.res = resChan
+	dbt.txs = txs
+	tps.txpool.recvBlkTxs <- dbt
+
+	<-dbt.res
+	TXPoolLog.Infof(LOGTABLE_TXPOOL, "del txs ok")
 }
 
 func (tps *TXPoolServer) IsTxsLenZero(chainId string) bool {

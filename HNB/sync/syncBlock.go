@@ -1,7 +1,7 @@
 package sync
 
 import (
-	syncComm "github.com/HNB-ECO/HNB-Blockchain/HNB/sync/common"
+	syncComm "HNB/sync/common"
 )
 
 type blockSyncReq struct {

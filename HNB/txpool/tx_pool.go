@@ -1,13 +1,20 @@
 package txpool
 
 import (
+	"HNB/appMgr"
+	"HNB/common"
+	"HNB/common/prque"
+	"HNB/config"
+	dbComm "HNB/db/common"
+	"HNB/ledger"
+	"HNB/msp"
+	"HNB/p2pNetwork"
 	"HNB/p2pNetwork/message/reqMsg"
+	"HNB/util"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
-	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 	"math/big"
 	"sort"
 	"sync"
@@ -32,6 +39,7 @@ var (
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 )
 
+// TxStatus is the current status of a transaction as seen by the pool.
 type TxStatus uint
 
 const (
@@ -41,6 +49,7 @@ const (
 	TxStatusIncluded
 )
 
+// TxPoolConfig are the configuration parameters of the transaction pool.
 type TxPoolConfig struct {
 	Locals    []common.Address // Addresses that should be treated by default as local
 	Journal   string           // Journal of local transactions to survive node restarts
@@ -55,8 +64,10 @@ type TxPoolConfig struct {
 	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
 }
 
+// DefaultTxPoolConfig contains the default configurations for the transaction
+// pool.
 var DefaultTxPoolConfig = TxPoolConfig{
-
+	//Journal:   "transactions.rlp",
 	Rejournal: time.Hour,
 
 	AccountSlots: 16,
@@ -67,6 +78,8 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	Lifetime: 3 * time.Hour,
 }
 
+// sanitize checks the provided user configurations and changes anything that's
+// unreasonable or unworkable.
 func (config *TxPoolConfig) sanitize() TxPoolConfig {
 	conf := *config
 	if conf.Rejournal < time.Second {
@@ -76,13 +89,26 @@ func (config *TxPoolConfig) sanitize() TxPoolConfig {
 	return conf
 }
 
+// TxPool contains all currently known transactions. Transactions
+// enter the pool when they are received from the network or submitted
+// locally. They exit the pool when they are included in the blockchain.
+//
+// The pool separates processable transactions (which can be applied to the
+// current state) and future transactions. Transactions move between those
+// two states over time as they are received and processed.
+
+type DelBlkTxs struct {
+	txs common.Transactions
+	res chan struct{}
+}
+
 type TxPool struct {
 	config       TxPoolConfig
 	signer       msp.Signer
 	mu           sync.RWMutex
 	db           dbComm.KVStore
 	pendingState *PendingCache // Pending state tracking virtual nonces
-	recvBlkTxs   chan common.Transactions
+	recvBlkTxs   chan *DelBlkTxs
 	notify       chan struct{}
 	recvTx       chan *RecvTxStruct
 
@@ -96,6 +122,7 @@ type TxPool struct {
 
 	wg sync.WaitGroup // for shutdown sync
 }
+
 type RecvTxStruct struct {
 	recvTx []byte
 	local  bool
@@ -107,7 +134,7 @@ func NewTxPool(config TxPoolConfig) *TxPool {
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 	chainID := new(big.Int)
-	chainID.SetBytes([]byte(common.HGS))
+	chainID.SetBytes([]byte(common.HNB))
 
 	// Create the transaction pool with its initial settings
 	pool := &TxPool{
@@ -117,7 +144,7 @@ func NewTxPool(config TxPoolConfig) *TxPool {
 		queue:      make(map[common.Address]*txList),
 		beats:      make(map[common.Address]time.Time),
 		all:        newTxLookup(),
-		recvBlkTxs: make(chan common.Transactions),
+		recvBlkTxs: make(chan *DelBlkTxs),
 		notify:     make(chan struct{}, 10),
 		recvTx:     make(chan *RecvTxStruct, 10000),
 	}
@@ -174,14 +201,13 @@ func (pool *TxPool) loop() {
 		select {
 		// Handle ChainHeadEvent
 		case txs := <-pool.recvBlkTxs:
-
-			if txs != nil {
+			if txs.txs != nil {
 				pool.mu.Lock()
-				TXPoolLog.Debugf(LOGTABLE_TXPOOL, "del tx length %v", len(txs))
-				pool.reset(txs)
+				TXPoolLog.Debugf(LOGTABLE_TXPOOL, "del tx length %v", len(txs.txs))
+				pool.reset(txs.txs)
 				pool.mu.Unlock()
 			}
-
+			txs.res <- struct{}{}
 		case <-report.C:
 			pool.mu.RLock()
 			pending, queued := pool.stats()
@@ -222,6 +248,8 @@ func (pool *TxPool) loop() {
 	}
 }
 
+// lockedReset is a wrapper around reset to allow calling it in a thread safe
+// manner. This method is only ever used in the tester!
 func (pool *TxPool) lockedReset() {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -284,6 +312,7 @@ func (pool *TxPool) Stats() (int, int) {
 	return pool.stats()
 }
 
+// stats retrieves the current pool stats, namely the number of pending and the
 // number of queued (non-executable) transactions.
 func (pool *TxPool) stats() (int, int) {
 	pending := 0
@@ -359,15 +388,29 @@ func (pool *TxPool) validateTx(tx *common.Transaction, local bool) error {
 
 	// Make sure the transaction is signed properly
 	//from, err := msp.Sender(pool.signer, tx)
-	from := tx.From
+	from, err := msp.Sender(pool.signer, tx)
+	if err != nil {
+		TXPoolLog.Errorf(LOGTABLE_TXPOOL, "tx sender err:%v", err.Error())
+		return ErrInvalidSender
+	}
+
+	from1 := tx.From
+
+	if config.Config.RunMode == "dev" {
+		if bytes.Compare(from.GetBytes(), from1.GetBytes()) != 0 {
+			TXPoolLog.Errorf(LOGTABLE_TXPOOL, "from:%v signfrom:%v",
+				util.ByteToHex(from.GetBytes()), util.ByteToHex(from1.GetBytes()))
+			return errors.New("sign or tx.from addr not same")
+		}
+	}
+
 	//if err != nil {
 	//	TXPoolLog.Errorf(LOGTABLE_TXPOOL, "invalid sender err:%v", err.Error())
 	//	return ErrInvalidSender
 	//}
+
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
-	//如果 交易地址不是本地的，需要计算以下gas是否满足最低要求
-	//如果 交易地址是本地的 不需要计算gas是否满足最低要求都要打包
 
 	// Ensure the transaction adheres to nonce ordering
 	nonce, _ := ledger.GetNonce(from)
@@ -376,7 +419,9 @@ func (pool *TxPool) validateTx(tx *common.Transaction, local bool) error {
 		return ErrNonceTooLow
 	}
 
-	return nil
+	//金额检测
+	err = appMgr.CheckTx(tx)
+	return err
 }
 
 // add validates a transaction and inserts it into the non-executable queue for
@@ -427,6 +472,8 @@ func (pool *TxPool) add(tx *common.Transaction, local bool) (bool, error) {
 	return replace, nil
 }
 
+// enqueueTx inserts a new transaction into the non-executable transaction queue.
+//
 // Note, this method assumes the pool lock is held!
 func (pool *TxPool) enqueueTx(hash common.Hash, tx *common.Transaction) (bool, error) {
 	// Try to insert the transaction into the future queue
@@ -874,7 +921,7 @@ func (pool *TxPool) handlerTx() {
 				return
 			}
 
-			if tx.Type == "" {
+			if tx.ContractName == "" {
 				TXPoolLog.Infof(LOGTABLE_TXPOOL, "txid =%s chainID = nil", fmt.Sprintf("%x", tx.Txid))
 				continue
 			}
@@ -960,6 +1007,15 @@ func (as *accountSet) flatten() []common.Address {
 	return *as.cache
 }
 
+// txLookup is used internally by TxPool to track transactions while allowing lookup without
+// mutex contention.
+//
+// Note, although this type is properly protected against concurrent access, it
+// is **not** a type that should ever be mutated or even exposed outside of the
+// transaction pool, since its internal state is tightly coupled with the pools
+// internal mechanisms. The sole purpose of the type is to permit out-of-bound
+// peeking into the pool in TxPool.Get without having to acquire the widely scoped
+// TxPool.mu mutex.
 type txLookup struct {
 	all  map[common.Hash]*common.Transaction
 	lock sync.RWMutex

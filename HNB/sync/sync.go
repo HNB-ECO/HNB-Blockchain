@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
+	appComm "HNB/appMgr/common"
+	"HNB/logging"
+	"HNB/p2pNetwork"
 	syncComm "HNB/sync/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/txpool"
 )
 
 var syncLogger logging.LogModule
@@ -90,7 +90,7 @@ func (sh *SyncHandler) Start() {
 	//for i := 0; i < length; i++ {
 	//	sh.addSyncHandler(chains[i].ChainID)
 	//}
-	sh.addSyncHandler(txpool.HGS)
+	sh.addSyncHandler(appComm.HNB)
 
 	//for j := 0; j < 3; j++ {
 	go sh.blockSyncThread()

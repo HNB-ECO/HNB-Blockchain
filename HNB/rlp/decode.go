@@ -1,3 +1,19 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package rlp
 
 import (
@@ -13,6 +29,8 @@ import (
 )
 
 var (
+	// EOL is returned when the end of the current list
+	// has been reached during streaming.
 	EOL = errors.New("rlp: end of list")
 
 	// Actual Errors
@@ -32,15 +50,89 @@ var (
 	errDecodeIntoNil = errors.New("rlp: pointer given to Decode must not be nil")
 )
 
+// Decoder is implemented by types that require custom RLP
+// decoding rules or need to decode into private fields.
+//
+// The DecodeRLP method should read one value from the given
+// Stream. It is not forbidden to read less or more, but it might
+// be confusing.
 type Decoder interface {
 	DecodeRLP(*Stream) error
 }
 
+// Decode parses RLP-encoded data from r and stores the result in the
+// value pointed to by val. Val must be a non-nil pointer. If r does
+// not implement ByteReader, Decode will do its own buffering.
+//
+// Decode uses the following type-dependent decoding rules:
+//
+// If the type implements the Decoder interface, decode calls
+// DecodeRLP.
+//
+// To decode into a pointer, Decode will decode into the value pointed
+// to. If the pointer is nil, a new value of the pointer's element
+// type is allocated. If the pointer is non-nil, the existing value
+// will be reused.
+//
+// To decode into a struct, Decode expects the input to be an RLP
+// list. The decoded elements of the list are assigned to each public
+// field in the order given by the struct's definition. The input list
+// must contain an element for each decoded field. Decode returns an
+// error if there are too few or too many elements.
+//
+// The decoding of struct fields honours certain struct tags, "tail",
+// "nil" and "-".
+//
+// The "-" tag ignores fields.
+//
+// For an explanation of "tail", see the example.
+//
+// The "nil" tag applies to pointer-typed fields and changes the decoding
+// rules for the field such that input values of size zero decode as a nil
+// pointer. This tag can be useful when decoding recursive types.
+//
+//     type StructWithEmptyOK struct {
+//         Foo *[20]byte `rlp:"nil"`
+//     }
+//
+// To decode into a slice, the input must be a list and the resulting
+// slice will contain the input elements in order. For byte slices,
+// the input must be an RLP string. Array types decode similarly, with
+// the additional restriction that the number of input elements (or
+// bytes) must match the array's length.
+//
+// To decode into a Go string, the input must be an RLP string. The
+// input bytes are taken as-is and will not necessarily be valid UTF-8.
+//
+// To decode into an unsigned integer type, the input must also be an RLP
+// string. The bytes are interpreted as a big endian representation of
+// the integer. If the RLP string is larger than the bit size of the
+// type, Decode will return an error. Decode also supports *big.Int.
+// There is no size limit for big integers.
+//
+// To decode into an interface value, Decode stores one of these
+// in the value:
+//
+//	  []interface{}, for RLP lists
+//	  []byte, for RLP strings
+//
+// Non-empty interface types are not supported, nor are booleans,
+// signed integers, floating point numbers, maps, channels and
+// functions.
+//
+// Note that Decode does not set an input limit for all readers
+// and may be vulnerable to panics cause by huge value sizes. If
+// you need an input limit, use
+//
+//     NewStream(r, limit).Decode(val)
 func Decode(r io.Reader, val interface{}) error {
 	// TODO: this could use a Stream from a pool.
 	return NewStream(r, 0).Decode(val)
 }
 
+// DecodeBytes parses RLP data from b into val.
+// Please see the documentation of Decode for the decoding rules.
+// The input must contain exactly one value and no trailing data.
 func DecodeBytes(b []byte, val interface{}) error {
 	// TODO: this could use a Stream from a pool.
 	r := bytes.NewReader(b)
@@ -359,6 +451,8 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 	return dec, nil
 }
 
+// makePtrDecoder creates a decoder that decodes into
+// the pointer's element type.
 func makePtrDecoder(typ reflect.Type) (decoder, error) {
 	etype := typ.Elem()
 	etypeinfo, err := cachedTypeInfo1(etype, tags{})
@@ -378,6 +472,11 @@ func makePtrDecoder(typ reflect.Type) (decoder, error) {
 	return dec, nil
 }
 
+// makeOptionalPtrDecoder creates a decoder that decodes empty values
+// as nil. Non-empty values are decoded into a value of the element type,
+// just like makePtrDecoder does.
+//
+// This decoder is used for pointer-typed struct fields with struct tag "nil".
 func makeOptionalPtrDecoder(typ reflect.Type) (decoder, error) {
 	etype := typ.Elem()
 	etypeinfo, err := cachedTypeInfo1(etype, tags{})
@@ -433,6 +532,8 @@ func decodeInterface(s *Stream, val reflect.Value) error {
 	return nil
 }
 
+// This decoder is used for non-pointer values of types
+// that implement the Decoder interface using a pointer receiver.
 func decodeDecoderNoPtr(s *Stream, val reflect.Value) error {
 	return val.Addr().Interface().(Decoder).DecodeRLP(s)
 }
@@ -470,11 +571,25 @@ func (k Kind) String() string {
 	}
 }
 
+// ByteReader must be implemented by any input reader for a Stream. It
+// is implemented by e.g. bufio.Reader and bytes.Reader.
 type ByteReader interface {
 	io.Reader
 	io.ByteReader
 }
 
+// Stream can be used for piecemeal decoding of an input stream. This
+// is useful if the input is very large or if the decoding rules for a
+// type depend on the input structure. Stream does not keep an
+// internal buffer. After decoding a value, the input reader will be
+// positioned just before the type information for the next value.
+//
+// When decoding a list and the input position reaches the declared
+// length of the list, all operations will return error EOL.
+// The end of the list must be acknowledged using ListEnd to continue
+// reading the enclosing list.
+//
+// Stream is not safe for concurrent use.
 type Stream struct {
 	r ByteReader
 
@@ -494,12 +609,31 @@ type Stream struct {
 
 type listpos struct{ pos, size uint64 }
 
+// NewStream creates a new decoding stream reading from r.
+//
+// If r implements the ByteReader interface, Stream will
+// not introduce any buffering.
+//
+// For non-toplevel values, Stream returns ErrElemTooLarge
+// for values that do not fit into the enclosing list.
+//
+// Stream supports an optional input limit. If a limit is set, the
+// size of any toplevel value will be checked against the remaining
+// input length. Stream operations that encounter a value exceeding
+// the remaining input length will return ErrValueTooLarge. The limit
+// can be set by passing a non-zero value for inputLimit.
+//
+// If r is a bytes.Reader or strings.Reader, the input limit is set to
+// the length of r's underlying data unless an explicit limit is
+// provided.
 func NewStream(r io.Reader, inputLimit uint64) *Stream {
 	s := new(Stream)
 	s.Reset(r, inputLimit)
 	return s
 }
 
+// NewListStream creates a new stream that pretends to be positioned
+// at an encoded list of the given length.
 func NewListStream(r io.Reader, len uint64) *Stream {
 	s := new(Stream)
 	s.Reset(r, len)
@@ -508,6 +642,9 @@ func NewListStream(r io.Reader, len uint64) *Stream {
 	return s
 }
 
+// Bytes reads an RLP string and returns its contents as a byte slice.
+// If the input does not contain an RLP string, the returned
+// error will be ErrExpectedString.
 func (s *Stream) Bytes() ([]byte, error) {
 	kind, size, err := s.Kind()
 	if err != nil {
@@ -556,6 +693,9 @@ func (s *Stream) Raw() ([]byte, error) {
 	return buf, nil
 }
 
+// Uint reads an RLP string of up to 8 bytes and returns its contents
+// as an unsigned integer. If the input does not contain an RLP string, the
+// returned error will be ErrExpectedString.
 func (s *Stream) Uint() (uint64, error) {
 	return s.uint(64)
 }
@@ -593,6 +733,9 @@ func (s *Stream) uint(maxbits int) (uint64, error) {
 	}
 }
 
+// Bool reads an RLP string of up to 1 byte and returns its contents
+// as a boolean. If the input does not contain an RLP string, the
+// returned error will be ErrExpectedString.
 func (s *Stream) Bool() (bool, error) {
 	num, err := s.uint(8)
 	if err != nil {
@@ -608,6 +751,9 @@ func (s *Stream) Bool() (bool, error) {
 	}
 }
 
+// List starts decoding an RLP list. If the input does not contain a
+// list, the returned error will be ErrExpectedList. When the list's
+// end has been reached, any Stream operation will return EOL.
 func (s *Stream) List() (size uint64, err error) {
 	kind, size, err := s.Kind()
 	if err != nil {
@@ -622,6 +768,8 @@ func (s *Stream) List() (size uint64, err error) {
 	return size, nil
 }
 
+// ListEnd returns to the enclosing list.
+// The input reader must be positioned at the end of a list.
 func (s *Stream) ListEnd() error {
 	if len(s.stack) == 0 {
 		return errNotInList
@@ -639,6 +787,9 @@ func (s *Stream) ListEnd() error {
 	return nil
 }
 
+// Decode decodes a value and stores the result in the value pointed
+// to by val. Please see the documentation for the Decode function
+// to learn about the decoding rules.
 func (s *Stream) Decode(val interface{}) error {
 	if val == nil {
 		return errDecodeIntoNil
@@ -664,6 +815,12 @@ func (s *Stream) Decode(val interface{}) error {
 	return err
 }
 
+// Reset discards any information about the current decoding context
+// and starts reading from r. This method is meant to facilitate reuse
+// of a preallocated Stream across many decoding operations.
+//
+// If r does not also implement ByteReader, Stream will do its own
+// buffering.
 func (s *Stream) Reset(r io.Reader, inputLimit uint64) {
 	if inputLimit > 0 {
 		s.remaining = inputLimit
@@ -698,6 +855,17 @@ func (s *Stream) Reset(r io.Reader, inputLimit uint64) {
 	}
 }
 
+// Kind returns the kind and size of the next value in the
+// input stream.
+//
+// The returned size is the number of bytes that make up the value.
+// For kind == Byte, the size is zero because the value is
+// contained in the type tag.
+//
+// The first call to Kind will read size information from the input
+// reader and leave it positioned at the start of the actual bytes of
+// the value. Subsequent calls to Kind (until the value is decoded)
+// will not advance the input reader and return cached information.
 func (s *Stream) Kind() (kind Kind, size uint64, err error) {
 	var tos *listpos
 	if len(s.stack) > 0 {

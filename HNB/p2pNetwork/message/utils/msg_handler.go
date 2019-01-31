@@ -1,10 +1,10 @@
 package utils
 
 import (
-	msgCommon "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
-	msgTypes "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/server"
+	msgCommon "HNB/p2pNetwork/common"
+	msgTypes "HNB/p2pNetwork/message/bean"
+	"HNB/p2pNetwork/message/reqMsg"
+	"HNB/p2pNetwork/server"
 	"net"
 	"strconv"
 	"time"
@@ -258,6 +258,7 @@ func AddrHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) 
 	//log.Debug("handle addr message", data.Addr, data.Id)
 
 	var msg = data.Payload.(*msgTypes.Addr)
+	P2PLog.Debugf(LOGTABLE_NETWORK, "get addr %v", msg.NodeAddrs)
 	for _, v := range msg.NodeAddrs {
 		var ip net.IP
 		ip = v.IpAddr[:]
@@ -282,7 +283,14 @@ func AddrHandle(data *msgTypes.MsgPayload, p2p server.P2P, args ...interface{}) 
 			continue
 		}
 		//log.Info("connect ip address:", address)
-		go p2p.Connect(address, false)
+		P2PLog.Debugf(LOGTABLE_NETWORK, "try connnect %v", address)
+		go func() {
+			err := p2p.Connect(address, false)
+			if err != nil {
+				P2PLog.Debugf(LOGTABLE_NETWORK, "try connnect %v fail %v",
+					address, err.Error())
+			}
+		}()
 	}
 }
 

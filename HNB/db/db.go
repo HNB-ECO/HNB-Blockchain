@@ -1,36 +1,54 @@
 package db
 
-import(
+import (
+	"HNB/config"
 	dbComm "HNB/db/common"
 	lImpl "HNB/db/leveldbImpl"
-	"HNB/config"
+	mImpl "HNB/db/mysqlImpl"
 	"HNB/logging"
 )
 
-
 var DBLog logging.LogModule
 
-const(
+const (
 	LOGTABLE_DB string = "db"
 )
 
-func InitDB(dbType string) (dbComm.KVStore, error){
-    DBLog = logging.GetLogIns()
+var KVDB dbComm.KVStore
+
+func InitKVDB(dbType string) (dbComm.KVStore, error) {
+	DBLog = logging.GetLogIns()
 	switch dbType {
 	case "leveldb":
 		var file string
-		if config.Config.DBPath != ""{
+		if config.Config.DBPath != "" {
 			file = config.Config.DBPath
-		}else{
+		} else {
 			file = "./testDB"
 		}
-		DBLog.Info(LOGTABLE_DB, "leveldb file: " + file)
+		DBLog.Info(LOGTABLE_DB, "leveldb file: "+file)
 		ins, err := lImpl.NewLevelDBStore(file)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
+		KVDB = ins
 		return ins, nil
 	}
 	return nil, nil
 }
 
+func InitSQLDB() (dbComm.KVStore, error) {
+
+	ins, err := mImpl.NewMySQLStore(config.Config.SQLIP,
+		config.Config.UserName, config.Config.Password)
+
+	if err != nil {
+		return nil, err
+	}
+	//创建块表
+	err = ins.NewBlockTable()
+	if err != nil {
+		return nil, err
+	}
+	return ins, nil
+}

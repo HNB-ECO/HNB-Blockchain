@@ -1,20 +1,20 @@
 package nonceStore
 
 import (
-	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/wrongStore/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	dbComm "HNB/db/common"
+	"HNB/ledger/wrongStore/common"
+	"HNB/logging"
 )
 
 var BlockLog logging.LogModule
 
 type WrongStore struct {
-	db dbComm.KVStore
+	db    dbComm.KVStore
 }
 
 const (
 	LOGTABLE_WRONG string = "wrongIndex"
-	WRONG                 = "wrong"
+	WRONG = "wrong"
 )
 
 func NewWrongStore(db dbComm.KVStore) common.WrongIndexStore {
@@ -24,7 +24,8 @@ func NewWrongStore(db dbComm.KVStore) common.WrongIndexStore {
 	return bc
 }
 
-func (ws *WrongStore) GetWrongIndex(txid []byte) (string, error) {
+
+func (ws *WrongStore)GetWrongIndex(txid []byte) (string, error){
 	key := append([]byte(WRONG), txid[:]...)
 	reason, err := ws.db.Get(key)
 	if err != nil {
@@ -34,8 +35,10 @@ func (ws *WrongStore) GetWrongIndex(txid []byte) (string, error) {
 	return string(reason), nil
 }
 
-func (ws *WrongStore) SetWrongIndex(txid []byte, reason string) error {
+func (ws *WrongStore)SetWrongIndex(txid []byte, reason string) error{
 	key := append([]byte(WRONG), txid[:]...)
 	err := ws.db.Put(key, []byte(reason))
 	return err
 }
+
+

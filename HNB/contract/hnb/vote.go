@@ -9,11 +9,10 @@ import (
 	"strconv"
 )
 
-
 type VoteInfo struct {
 	FromAddr    []byte `json:"fromAddr"`
 	Candidate   []byte `json:"candidate"`
-	VotingPower int64  `json:"votingPower"`
+	VotingPower int64  `json:""`
 	VoteEpoch   uint64 `json:"voteEpoch"`
 }
 type PeerInfo struct {
@@ -129,7 +128,7 @@ func (h *hnb) SaveTokenFromInfo(ca appComm.ContractApi, vi *VoteInfo) error {
 
 	vrs := make([]*VoteRecord, 0)
 
-	if voteRecord != nil{
+	if voteRecord != nil {
 		err = json.Unmarshal(voteRecord, &vrs)
 		if err != nil {
 			return err
@@ -210,7 +209,7 @@ func (h *hnb) UnFreezePro(ca appComm.ContractApi, epochNo uint64) error {
 	}
 
 	vrs := make([]*VoteRecord, 0)
-	if voteRecord != nil{
+	if voteRecord != nil {
 		err = json.Unmarshal(voteRecord, &vrs)
 		if err != nil {
 			return err
@@ -239,4 +238,3 @@ func (h *hnb) UnFreezePro(ca appComm.ContractApi, epochNo uint64) error {
 	}
 	return nil
 }
-

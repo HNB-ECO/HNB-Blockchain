@@ -1,15 +1,15 @@
 package msp
 
 import (
+	"HNB/bccsp"
+	"HNB/bccsp/sw"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
 
+	"HNB/bccsp/factory"
+	"HNB/bccsp/secp256k1"
 	"crypto/sha256"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/factory"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
 	"github.com/juju/errors"
 )
 

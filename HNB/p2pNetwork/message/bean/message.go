@@ -1,12 +1,12 @@
 package bean
 
 import (
+	"HNB/p2pNetwork/common"
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
 	"io"
 )
 

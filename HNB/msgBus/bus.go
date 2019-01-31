@@ -1,7 +1,7 @@
 package msgBus
 
 import (
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"HNB/logging"
 	mbus "github.com/asaskevich/EventBus"
 )
 

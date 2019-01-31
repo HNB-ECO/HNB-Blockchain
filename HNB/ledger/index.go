@@ -1,8 +1,8 @@
 package ledger
 
 import (
+	bsComm "HNB/ledger/blockStore/common"
 	"encoding/json"
-	bsComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
 )
 
 type indexStore struct {

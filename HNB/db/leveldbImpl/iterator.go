@@ -3,6 +3,7 @@ package leveldbImpl
 import (
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 )
+
 type Iterator struct {
 	iter iterator.Iterator
 }
@@ -38,4 +39,3 @@ func (it *Iterator) Value() []byte {
 func (it *Iterator) Release() {
 	it.iter.Release()
 }
-

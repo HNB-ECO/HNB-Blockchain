@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli"
+	"HNB/cli"
 )
 
 func main() {

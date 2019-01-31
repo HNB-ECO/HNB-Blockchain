@@ -1,7 +1,7 @@
 package bean
 
 import (
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"HNB/p2pNetwork/common"
 )
 
 type Disconnected struct{}

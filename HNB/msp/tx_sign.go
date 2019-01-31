@@ -1,17 +1,18 @@
 package msp
 
 import (
+	"HNB/bccsp"
+	"HNB/bccsp/secp256k1"
+	"HNB/bccsp/sha3"
+	"HNB/bccsp/sw"
+	"HNB/common"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sha3"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 	"math/big"
+	//	"HNB/config"
 )
 
 var (
@@ -167,12 +168,20 @@ func signHash(x interface{}) (h common.Hash) {
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s HNBSigner) Hash(tx *common.Transaction) (h common.Hash) {
+	//	if config.Config.RunMode == "dev"{
 	return signHash([]interface{}{
 		tx.ContractName,
 		tx.From,
 		tx.Payload,
 		tx.NonceValue,
 	})
+	//}
+	//return signHash([]interface{}{
+	//	tx.ContractName,
+	//	tx.From,
+	//	tx.Payload,
+	//	0,
+	//})
 }
 
 // HomesteadTransaction implements TransactionInterface using the
@@ -216,12 +225,22 @@ func (fs FrontierSigner) SignatureValues(tx *common.Transaction, sig []byte) (r,
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *common.Transaction) common.Hash {
+	//if config.Config.RunMode == "dev"{
 	return signHash([]interface{}{
 		tx.ContractName,
 		tx.From,
 		tx.Payload,
 		tx.NonceValue,
 	})
+	//}
+	//
+	//return signHash([]interface{}{
+	//	tx.ContractName,
+	//	tx.From,
+	//	tx.Payload,
+	//	0,
+	//})
+
 }
 
 func (fs FrontierSigner) Sender(tx *common.Transaction) (common.Address, error) {

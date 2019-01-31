@@ -1,16 +1,16 @@
 package sync
 
 import (
+	"HNB/ledger"
+	pbLedger "HNB/ledger/blockStore/common"
+	"HNB/p2pNetwork"
+	netCommon "HNB/p2pNetwork/common"
+	mt "HNB/p2pNetwork/message/bean"
+	"HNB/p2pNetwork/message/reqMsg"
+	syncComm "HNB/sync/common"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
-	pbLedger "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
-	netCommon "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
-	mt "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
-	syncComm "github.com/HNB-ECO/HNB-Blockchain/HNB/sync/common"
 	"math/rand"
 	"time"
 )
@@ -86,14 +86,14 @@ func (sh *SyncHandler) processRequestBlocks(req *syncComm.RequestBlocks, peerID 
 	p2pNetwork.Send(peerID, msg, false)
 }
 
-func (sh *SyncHandler) HandlerMessage(msg []byte, msgSender uint64) {
+func (sh *SyncHandler) HandlerMessage(msg []byte, msgSender uint64) error {
 
 	syncMsg := &syncComm.SyncMessage{}
 	err := json.Unmarshal(msg, syncMsg)
 	if err != nil {
 		syncLogger.Infof(LOGTABLE_SYNC, "unmar %s", string(msg))
 		syncLogger.Errorf(LOGTABLE_SYNC, "(sync req).(req unmar).(%s)", err.Error())
-		return
+		return err
 	}
 
 	switch syncMsg.Type {
@@ -102,7 +102,7 @@ func (sh *SyncHandler) HandlerMessage(msg []byte, msgSender uint64) {
 		err := json.Unmarshal(syncMsg.Payload, req)
 		if err != nil {
 			syncLogger.Errorf(LOGTABLE_SYNC, "(sync req).(req unmar).(%s)", err.Error())
-			return
+			return err
 		}
 
 		syncLogger.Infof(LOGTABLE_SYNC, "* (sync req).(%v -> recv req blks(%d, %d), v(%d)).(parsing)",
@@ -119,7 +119,7 @@ func (sh *SyncHandler) HandlerMessage(msg []byte, msgSender uint64) {
 		err := json.Unmarshal(syncMsg.Payload, res)
 		if err != nil {
 			syncLogger.Errorf(LOGTABLE_SYNC, "(sync res).(unmar).(%s)", err.Error())
-			return
+			return err
 		}
 
 		sch := sh.getSyncHandlerByChainID(res.ChainID)
@@ -132,7 +132,8 @@ func (sh *SyncHandler) HandlerMessage(msg []byte, msgSender uint64) {
 			}
 		}
 	}
-	//return nil
+
+	return nil
 }
 
 func (sch *syncChainHandler) genRemoteBlocksRequest(beginIndex uint64, endIndex uint64) (*mt.SyncMsg, error) {

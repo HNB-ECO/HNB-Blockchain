@@ -3,7 +3,6 @@ package hnb
 import (
 	appComm "HNB/appMgr/common"
 	"HNB/logging"
-	"HNB/txpool"
 	"HNB/util"
 	"bytes"
 	"encoding/json"
@@ -18,16 +17,15 @@ const (
 )
 
 type SameTx struct {
-	OutputAddr []byte `json:"output"`
-	Amount     int64  `json:"amount"`
+	OutputAddr util.HexBytes `json:"output"`
+	Amount     int64         `json:"amount"`
 }
 
 type DiffTx struct {
-	OutputAddr []byte `json:"output"`
-	Amount     int64  `json:"amount"`
-	InAmount   int64  `json:"inAmount"`
+	OutputAddr util.HexBytes `json:"output"`
+	Amount     int64         `json:"amount"`
+	InAmount   int64         `json:"inAmount"`
 }
-
 
 type HnbTx struct {
 	//1  same   2  diff  3 vote
@@ -52,7 +50,7 @@ const (
 )
 
 const (
-	TOTAL_BALANCE   = 10000000
+	TOTAL_BALANCE        = 10000000
 	VOTEDB        string = "epoch"
 	VOTEDB_RECORD        = "record_epoch"
 )
@@ -66,7 +64,6 @@ const (
 	VOTESUM
 	TOKENORDER
 )
-
 
 var user = []string{"68175250cadc6f2524f55e891e244116fec4b690"}
 
@@ -96,6 +93,43 @@ func (h *hnb) Init() error {
 	return nil
 }
 
+func (h *hnb) CheckSamePro(ca appComm.ContractApi, hx *SameTx) error {
+
+	fromAddr := ca.GetFrom()
+	from := fromAddr.GetBytes()
+
+	if bytes.Compare(from, hx.OutputAddr) == 0 {
+		return errors.New("in and out addr same")
+	}
+
+	inputAmount, err := h.GetBalance(ca, from)
+	if err != nil {
+		return err
+	}
+
+	if inputAmount < hx.Amount {
+		return errors.New("insufficient balance")
+	}
+
+	return nil
+}
+
+func (h *hnb) CheckDiffPro(ca appComm.ContractApi, hx *DiffTx) error {
+	fromAddr := ca.GetFrom()
+	from := fromAddr.GetBytes()
+
+	inputAmount, err := h.GetBalance(ca, from)
+	if err != nil {
+		return err
+	}
+
+	if inputAmount < hx.InAmount {
+		return errors.New("insufficient balance")
+	}
+
+	return nil
+}
+
 func (h *hnb) SamePro(ca appComm.ContractApi, hx *SameTx) error {
 
 	fromAddr := ca.GetFrom()
@@ -106,7 +140,7 @@ func (h *hnb) SamePro(ca appComm.ContractApi, hx *SameTx) error {
 	}
 
 	inputAmount, err := h.GetBalance(ca, from)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
@@ -121,12 +155,12 @@ func (h *hnb) SamePro(ca appComm.ContractApi, hx *SameTx) error {
 		return err
 	}
 
-	err = h.SetBalance(ca, from, inputAmount - hx.Amount)
+	err = h.SetBalance(ca, from, inputAmount-hx.Amount)
 	if err != nil {
 		return err
 	}
 
-	err = h.SetBalance(ca, hx.OutputAddr, bAmount + hx.Amount)
+	err = h.SetBalance(ca, hx.OutputAddr, bAmount+hx.Amount)
 	if err != nil {
 		return err
 	}
@@ -136,7 +170,7 @@ func (h *hnb) DiffPro(ca appComm.ContractApi, hx *DiffTx) error {
 	fromAddr := ca.GetFrom()
 	from := fromAddr.GetBytes()
 
-	inputAmount, err :=h.GetBalance(ca, from)
+	inputAmount, err := h.GetBalance(ca, from)
 	if err != nil {
 		return err
 	}
@@ -148,17 +182,17 @@ func (h *hnb) DiffPro(ca appComm.ContractApi, hx *DiffTx) error {
 	var bAmount int64 = 0
 
 	//from other coin
-	bAmount, err = h.GetOtherStateBalance(ca, txpool.HGS, hx.OutputAddr)
+	bAmount, err = h.GetOtherStateBalance(ca, appComm.HGS, hx.OutputAddr)
 	if err != nil {
 		return err
 	}
 
-	err = h.SetBalance(ca, from, inputAmount - hx.InAmount)
+	err = h.SetBalance(ca, from, inputAmount-hx.InAmount)
 	if err != nil {
 		return err
 	}
 
-	err = h.SetOtherStateBalance(ca, txpool.HGS, hx.OutputAddr, bAmount + hx.Amount)
+	err = h.SetOtherStateBalance(ca, appComm.HGS, hx.OutputAddr, bAmount+hx.Amount)
 	if err != nil {
 		return err
 	}
@@ -266,6 +300,48 @@ func (h *hnb) Invoke(ca appComm.ContractApi) error {
 	return nil
 }
 
+func (h *hnb) CheckTx(ca appComm.ContractApi) error {
+	HnbLog.Debugf(LOGTABLE_HNB, "CheckTx args: %v", ca.GetArgs())
+	arg := ca.GetArgs()
+	hx := HnbTx{}
+	err := json.Unmarshal([]byte(arg), &hx)
+	if err != nil {
+		return err
+	}
+
+	switch hx.TxType {
+	case SAME:
+		smTx := SameTx{}
+		err = json.Unmarshal(hx.PayLoad, &smTx)
+		if err != nil {
+			return err
+		}
+		return h.CheckSamePro(ca, &smTx)
+	case DIFF:
+		dfTx := DiffTx{}
+		err = json.Unmarshal(hx.PayLoad, &dfTx)
+		if err != nil {
+			return err
+		}
+		return h.CheckDiffPro(ca, &dfTx)
+	case POS_VOTE_TRANSCATION:
+		//posVote := VoteInfo{}
+		//err = json.Unmarshal(hx.PayLoad, &posVote)
+		//if err != nil {
+		//	return err
+		//}
+		//return h.CheckVotePro(ca, &posVote)
+	case UNFREEZE_TOKEN:
+		epochNo, err := strconv.ParseUint(string(hx.PayLoad), 10, 64)
+		if err != nil {
+			return err
+		}
+		return h.UnFreezePro(ca, epochNo)
+	}
+
+	return nil
+}
+
 func (h *hnb) Query(ca appComm.ContractApi) ([]byte, error) {
 	HnbLog.Infof(LOGTABLE_HNB, "Query args:%v", ca.GetArgs())
 	msg := ca.GetArgs()
@@ -306,4 +382,3 @@ func (h *hnb) Query(ca appComm.ContractApi) ([]byte, error) {
 	}
 	return nil, nil
 }
-

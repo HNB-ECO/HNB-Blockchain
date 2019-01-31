@@ -1,8 +1,8 @@
 package txpool
 
 import (
+	"HNB/common"
 	"container/heap"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 	"math/big"
 	"sort"
 )
@@ -245,6 +245,41 @@ func (l *txList) Forward(threshold uint64) common.Transactions {
 	return l.txs.Forward(threshold)
 }
 
+// Filter removes all transactions from the list with a cost or gas limit higher
+// than the provided thresholds. Every removed transaction is returned for any
+// post-removal maintenance. Strict-mode invalidated transactions are also
+// returned.
+//
+// This method uses the cached costcap and gascap to quickly decide if there's even
+// a point in calculating all the costs or if the balance covers all. If the threshold
+// is lower than the costgas cap, the caps will be reset to a new high after removing
+// the newly invalidated transactions.
+//func (l *txList) Filter(costLimit *big.Int, gasLimit uint64) (common.Transactions, common.Transactions) {
+//	// If all transactions are below the threshold, short circuit
+//	if l.costcap.Cmp(costLimit) <= 0 && l.gascap <= gasLimit {
+//		return nil, nil
+//	}
+//	l.costcap = new(big.Int).Set(costLimit) // Lower the caps to the thresholds
+//	l.gascap = gasLimit
+//
+//	// Filter out all the transactions above the account's funds
+//	removed := l.txs.Filter(func(tx *common.Transaction) bool { return tx.Cost().Cmp(costLimit) > 0 || tx.Gas() > gasLimit })
+//
+//	// If the list was strict, filter anything above the lowest nonce
+//	var invalids common.Transactions
+//
+//	if l.strict && len(removed) > 0 {
+//		lowest := uint64(math.MaxUint64)
+//		for _, tx := range removed {
+//			if nonce := tx.Nonce(); lowest > nonce {
+//				lowest = nonce
+//			}
+//		}
+//		invalids = l.txs.Filter(func(tx *common.Transaction) bool { return tx.Nonce() > lowest })
+//	}
+//	return removed, invalids
+//}
+
 // Cap places a hard limit on the number of items, returning all transactions
 // exceeding that limit.
 func (l *txList) Cap(threshold int) common.Transactions {
@@ -267,6 +302,13 @@ func (l *txList) Remove(tx *common.Transaction) (bool, common.Transactions) {
 	return true, nil
 }
 
+// Ready retrieves a sequentially increasing list of transactions starting at the
+// provided nonce that is ready for processing. The returned transactions will be
+// removed from the list.
+//
+// Note, all transactions with nonces lower than start will also be returned to
+// prevent getting into and invalid state. This is not something that should ever
+// happen but better to be self correcting than failing!
 func (l *txList) Ready(start uint64) common.Transactions {
 	return l.txs.Ready(start)
 }
@@ -287,3 +329,159 @@ func (l *txList) Empty() bool {
 func (l *txList) Flatten() common.Transactions {
 	return l.txs.Flatten()
 }
+
+// priceHeap is a heap.Interface implementation over transactions for retrieving
+// price-sorted transactions to discard when the pool fills up.
+//type priceHeap []*common.Transaction
+//
+//func (h priceHeap) Len() int      { return len(h) }
+//func (h priceHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
+//
+//func (h priceHeap) Less(i, j int) bool {
+//	// Sort primarily by price, returning the cheaper one
+//	switch h[i].GasPrice().Cmp(h[j].GasPrice()) {
+//	case -1:
+//		return true
+//	case 1:
+//		return false
+//	}
+//	// If the prices match, stabilize via nonces (high nonce is worse)
+//	return h[i].Nonce() > h[j].Nonce()
+//}
+
+//func (h *priceHeap) Push(x interface{}) {
+//	*h = append(*h, x.(*common.Transaction))
+//}
+//
+//func (h *priceHeap) Pop() interface{} {
+//	old := *h
+//	n := len(old)
+//	x := old[n-1]
+//	*h = old[0 : n-1]
+//	return x
+//}
+
+// txPricedList is a price-sorted heap to allow operating on transactions pool
+// contents in a price-incrementing way.
+//type txPricedList struct {
+//	all    *txLookup  // Pointer to the map of all transactions
+//	items  *priceHeap // Heap of prices of all the stored transactions
+//	stales int        // Number of stale price points to (re-heap trigger)
+//}
+//
+//// newTxPricedList creates a new price-sorted transaction heap.
+//func newTxPricedList(all *txLookup) *txPricedList {
+//	return &txPricedList{
+//		all:   all,
+//		items: new(priceHeap),
+//	}
+//}
+//
+//// Put inserts a new transaction into the heap.
+//func (l *txPricedList) Put(tx *common.Transaction) {
+//	heap.Push(l.items, tx)
+//}
+//
+//// Removed notifies the prices transaction list that an old transaction dropped
+//// from the pool. The list will just keep a counter of stale objects and update
+//// the heap if a large enough ratio of transactions go stale.
+//func (l *txPricedList) Removed() {
+//	// Bump the stale counter, but exit if still too low (< 25%)
+//	l.stales++
+//	if l.stales <= len(*l.items)/4 {
+//		return
+//	}
+//	// Seems we've reached a critical number of stale transactions, reheap
+//	reheap := make(priceHeap, 0, l.all.Count())
+//
+//	l.stales, l.items = 0, &reheap
+//	l.all.Range(func(hash common.Hash, tx *common.Transaction) bool {
+//		*l.items = append(*l.items, tx)
+//		return true
+//	})
+//	heap.Init(l.items)
+//}
+//
+//// Cap finds all the transactions below the given price threshold, drops them
+//// from the priced list and returns them for further removal from the entire pool.
+//func (l *txPricedList) Cap(threshold *big.Int, local *accountSet) common.Transactions {
+//	drop := make(common.Transactions, 0, 128) // Remote underpriced transactions to drop
+//	save := make(common.Transactions, 0, 64)  // Local underpriced transactions to keep
+//
+//	for len(*l.items) > 0 {
+//		// Discard stale transactions if found during cleanup
+//		tx := heap.Pop(l.items).(*common.Transaction)
+//		if l.all.Get(tx.Hash()) == nil {
+//			l.stales--
+//			continue
+//		}
+//		// Stop the discards if we've reached the threshold
+//		if tx.GasPrice().Cmp(threshold) >= 0 {
+//			save = append(save, tx)
+//			break
+//		}
+//		// Non stale transaction found, discard unless local
+//		if local.containsTx(tx) {
+//			save = append(save, tx)
+//		} else {
+//			drop = append(drop, tx)
+//		}
+//	}
+//	for _, tx := range save {
+//		heap.Push(l.items, tx)
+//	}
+//	return drop
+//}
+//
+//// Underpriced checks whether a transaction is cheaper than (or as cheap as) the
+//// lowest priced transaction currently being tracked.
+//func (l *txPricedList) Underpriced(tx *common.Transaction, local *accountSet) bool {
+//	// Local transactions cannot be underpriced
+//	if local.containsTx(tx) {
+//		return false
+//	}
+//	// Discard stale price points if found at the heap start
+//	for len(*l.items) > 0 {
+//		head := []*common.Transaction(*l.items)[0]
+//		if l.all.Get(head.Hash()) == nil {
+//			l.stales--
+//			heap.Pop(l.items)
+//			continue
+//		}
+//		break
+//	}
+//	// Check if the transaction is underpriced or not
+//	if len(*l.items) == 0 {
+//		log.Error("Pricing query for empty pool") // This cannot happen, print to catch programming errors
+//		return false
+//	}
+//	cheapest := []*common.Transaction(*l.items)[0]
+//	return cheapest.GasPrice().Cmp(tx.GasPrice()) >= 0
+//}
+//
+//// Discard finds a number of most underpriced transactions, removes them from the
+//// priced list and returns them for further removal from the entire pool.
+//func (l *txPricedList) Discard(count int, local *accountSet) common.Transactions {
+//	drop := make(common.Transactions, 0, count) // Remote underpriced transactions to drop
+//	save := make(common.Transactions, 0, 64)    // Local underpriced transactions to keep
+//
+//	for len(*l.items) > 0 && count > 0 {
+//		// Discard stale transactions if found during cleanup
+//		tx := heap.Pop(l.items).(*common.Transaction)
+//		if l.all.Get(tx.Hash()) == nil {
+//			l.stales--
+//			continue
+//		}
+//		// Non stale transaction found, discard unless local
+//		if local.containsTx(tx) {
+//			save = append(save, tx)
+//		} else {
+//			drop = append(drop, tx)
+//			count--
+//		}
+//	}
+//	for _, tx := range save {
+//		heap.Push(l.items, tx)
+//	}
+//	return drop
+//}

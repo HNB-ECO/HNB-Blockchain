@@ -1,14 +1,14 @@
 package p2pNetwork
 
 import (
+	"HNB/config"
+	"HNB/p2pNetwork/common"
+	"HNB/p2pNetwork/message/bean"
+	"HNB/p2pNetwork/message/reqMsg"
+	"HNB/p2pNetwork/peer"
+	"HNB/p2pNetwork/server"
 	"errors"
 	"fmt"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/peer"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/server"
 	"math/rand"
 	"net"
 	"strconv"

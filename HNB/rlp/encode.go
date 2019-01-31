@@ -1,3 +1,19 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package rlp
 
 import (
@@ -15,6 +31,8 @@ var (
 	EmptyList   = []byte{0xC0}
 )
 
+// Encoder is implemented by types that require custom
+// encoding rules or want to encode private fields.
 type Encoder interface {
 	// EncodeRLP should write the RLP encoding of its receiver to w.
 	// If the implementation is a pointer method, it may also be
@@ -27,6 +45,38 @@ type Encoder interface {
 	EncodeRLP(io.Writer) error
 }
 
+// Encode writes the RLP encoding of val to w. Note that Encode may
+// perform many small writes in some cases. Consider making w
+// buffered.
+//
+// Encode uses the following type-dependent encoding rules:
+//
+// If the type implements the Encoder interface, Encode calls
+// EncodeRLP. This is true even for nil pointers, please see the
+// documentation for Encoder.
+//
+// To encode a pointer, the value being pointed to is encoded. For nil
+// pointers, Encode will encode the zero value of the type. A nil
+// pointer to a struct type always encodes as an empty RLP list.
+// A nil pointer to an array encodes as an empty list (or empty string
+// if the array has element type byte).
+//
+// Struct values are encoded as an RLP list of all their encoded
+// public fields. Recursive struct types are supported.
+//
+// To encode slices and arrays, the elements are encoded as an RLP
+// list of the value's elements. Note that arrays and slices with
+// element type uint8 or byte are always encoded as an RLP string.
+//
+// A Go string is encoded as an RLP string.
+//
+// An unsigned integer value is encoded as an RLP string. Zero always
+// encodes as an empty RLP string. Encode also supports *big.Int.
+//
+// An interface value encodes as the value contained in the interface.
+//
+// Boolean values are not supported, nor are signed integers, floating
+// point numbers, maps, channels and functions.
 func Encode(w io.Writer, val interface{}) error {
 	if outer, ok := w.(*encbuf); ok {
 		// Encode was called by some type's EncodeRLP.
@@ -42,6 +92,8 @@ func Encode(w io.Writer, val interface{}) error {
 	return eb.toWriter(w)
 }
 
+// EncodeToBytes returns the RLP encoding of val.
+// Please see the documentation of Encode for the encoding rules.
 func EncodeToBytes(val interface{}) ([]byte, error) {
 	eb := encbufPool.Get().(*encbuf)
 	defer encbufPool.Put(eb)
@@ -52,6 +104,11 @@ func EncodeToBytes(val interface{}) ([]byte, error) {
 	return eb.toBytes(), nil
 }
 
+// EncodeToReader returns a reader from which the RLP encoding of val
+// can be read. The returned size is the total size of the encoded
+// data.
+//
+// Please see the documentation of Encode for the encoding rules.
 func EncodeToReader(val interface{}) (size int, r io.Reader, err error) {
 	eb := encbufPool.Get().(*encbuf)
 	eb.reset()
@@ -73,10 +130,14 @@ type listhead struct {
 	size   int // total size of encoded data (including list headers)
 }
 
+// encode writes head to the given buffer, which must be at least
+// 9 bytes long. It returns the encoded bytes.
 func (head *listhead) encode(buf []byte) []byte {
 	return buf[:puthead(buf, 0xC0, 0xF7, uint64(head.size))]
 }
 
+// headsize returns the size of a list or string header
+// for a value of the given size.
 func headsize(size uint64) int {
 	if size < 56 {
 		return 1
@@ -84,6 +145,8 @@ func headsize(size uint64) int {
 	return 1 + intsize(size)
 }
 
+// puthead writes a list or string header to buf.
+// buf must be at least 9 bytes long.
 func puthead(buf []byte, smalltag, largetag byte, size uint64) int {
 	if size < 56 {
 		buf[0] = smalltag + byte(size)
@@ -206,6 +269,8 @@ func (w *encbuf) toWriter(out io.Writer) (err error) {
 	return err
 }
 
+// encReader is the io.Reader returned by EncodeToReader.
+// It releases its encbuf at EOF.
 type encReader struct {
 	buf    *encbuf // the buffer we're reading from. this is nil when we're at EOF.
 	lhpos  int     // index of list header that we're reading
@@ -236,6 +301,8 @@ func (r *encReader) Read(b []byte) (n int, err error) {
 	}
 }
 
+// next returns the next piece of data to be read.
+// it returns nil at EOF.
 func (r *encReader) next() []byte {
 	switch {
 	case r.buf == nil:
@@ -405,6 +472,8 @@ func writeEncoder(val reflect.Value, w *encbuf) error {
 	return val.Interface().(Encoder).EncodeRLP(w)
 }
 
+// writeEncoderNoPtr handles non-pointer values that implement Encoder
+// with a pointer receiver.
 func writeEncoderNoPtr(val reflect.Value, w *encbuf) error {
 	if !val.CanAddr() {
 		// We can't get the address. It would be possible to make the
@@ -511,6 +580,8 @@ func makePtrWriter(typ reflect.Type) (writer, error) {
 	return writer, err
 }
 
+// putint writes i to the beginning of b in big endian byte
+// order, using the least number of bytes needed to represent i.
 func putint(b []byte, i uint64) (size int) {
 	switch {
 	case i < (1 << 8):

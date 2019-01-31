@@ -13,7 +13,6 @@ type KVStore interface {
 	NewIterator(prefix []byte) Iterator
 }
 
-
 type Iterator interface {
 	Next() bool
 	Prev() bool
@@ -22,8 +21,6 @@ type Iterator interface {
 	Seek(key []byte) bool
 	Key() []byte
 	Value() []byte
-//	Close()
-	Release()             //Close iterator
+	//	Close()
+	Release() //Close iterator
 }
-
-

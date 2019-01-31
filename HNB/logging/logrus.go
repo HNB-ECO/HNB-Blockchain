@@ -1,9 +1,9 @@
 package logging
 
 import (
+	"HNB/config"
+	"HNB/util"
 	"bufio"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"github.com/lestrrat/go-file-rotatelogs"
 	"github.com/rifflock/lfshook"
 	log "github.com/sirupsen/logrus"

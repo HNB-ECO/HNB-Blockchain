@@ -6,6 +6,28 @@ import (
 	"strconv"
 )
 
+func ToHex(b []byte) string {
+	hex := ByteToHex(b)
+	if len(hex) == 0 {
+		hex = "0"
+	}
+	return "0x" + hex
+}
+
+// FromHex returns the bytes represented by the hexadecimal string s.
+// s may be prefixed with "0x".
+func FromHex(s string) []byte {
+	if len(s) > 1 {
+		if s[0:2] == "0x" || s[0:2] == "0X" {
+			s = s[2:]
+		}
+	}
+	if len(s)%2 == 1 {
+		s = "0" + s
+	}
+	return HexToByte(s)
+}
+
 //byte转16进制字符串
 func ByteToHex(data []byte) string {
 	buffer := new(bytes.Buffer)

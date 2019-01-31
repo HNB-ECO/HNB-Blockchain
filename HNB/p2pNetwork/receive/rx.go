@@ -1,12 +1,12 @@
 package receive
 
 import (
+	"HNB/logging"
+	"HNB/p2pNetwork/common"
+	"HNB/p2pNetwork/message/bean"
 	"bufio"
 	"bytes"
 	"errors"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
 	"net"
 	"time"
 )

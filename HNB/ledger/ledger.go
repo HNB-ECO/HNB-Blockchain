@@ -1,19 +1,19 @@
 package ledger
 
 import (
+	txComm "HNB/common"
+	dbComm "HNB/db/common"
+	"HNB/ledger/blockStore"
+	bsComm "HNB/ledger/blockStore/common"
+	"HNB/ledger/merkle"
+	"HNB/ledger/nonceStore"
+	nnComm "HNB/ledger/nonceStore/common"
+	"HNB/ledger/stateStore"
+	ssComm "HNB/ledger/stateStore/common"
+	wgComm "HNB/ledger/wrongStore/common"
+	wgStore "HNB/ledger/wrongStore"
+	"HNB/logging"
 	"errors"
-	txComm "github.com/HNB-ECO/HNB-Blockchain/HNB/common"
-	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore"
-	bsComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/nonceStore"
-	nnComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/nonceStore/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore"
-	ssComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore/common"
-	wgStore "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/wrongStore"
-	wgComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/wrongStore/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 )
 
 // 系统数据在本文件中涉及存储，合约数据都在stateStore里面存储
@@ -164,10 +164,10 @@ func GetTransaction(blkNum uint64, offset uint32) (*txComm.Transaction, error) {
 	return tx, nil
 }
 
-func GetWrongIndex(txid []byte) (string, error) {
+func GetWrongIndex(txid []byte) (string, error){
 	return lh.wrongHandler.GetWrongIndex(txid)
 }
 
-func SetWrongIndex(txid []byte, reason string) error {
+func SetWrongIndex(txid []byte, reason string) error{
 	return lh.wrongHandler.SetWrongIndex(txid, reason)
 }

@@ -35,41 +35,47 @@
     "bgDemandTimeout": 1,
     "bftNum": 4,
     "geneBftGroup": [
-      {
-        "PubKeyStr": "0424941e08242174f96e6313846d81662a868a7e3e6a21be6b73b287395b7802c8ee722b2485c8bb32bbf90b3ad827a4f9c0d4032741f318b65c87d490ad8336cf",
-        "power": 1
-      },
-      {
-        "PubKeyStr": "0415050693c163fff2b88b07e7705030e3192c830f4d6484093ebc566da5f8d2137c5f4ae7027aea78cb389b45edc8eddbc7c28b25890f44d6b22ad629986438b3",
-        "power": 1
-      },
-      {
-        "PubKeyStr": "04b9630840f1fb924fa8371f65d42653c20aa8bf2b2346b45236a12428a43a2f1bbbb3bb22b98c3d650ece17ba5ca27ef1acf8671446b94cece6b1448b8bc8f9e4",
-        "power": 1
-      },
-      {
-        "PubKeyStr": "04ec0106a94bc4f7500a742db8cb80588a12d0bf8963e1863ddf44dde499d2f3d72415b3467d6cf25e4bdc9c328c3f34bd28e04435037e66e7a71ebb67a86bfcc3",
-        "power": 1
-      }],
+    {
+      "PubKeyStr": "0424941e08242174f96e6313846d81662a868a7e3e6a21be6b73b287395b7802c8ee722b2485c8bb32bbf90b3ad827a4f9c0d4032741f318b65c87d490ad8336cf",
+      "power": 1
+    },
+    {
+      "PubKeyStr": "0415050693c163fff2b88b07e7705030e3192c830f4d6484093ebc566da5f8d2137c5f4ae7027aea78cb389b45edc8eddbc7c28b25890f44d6b22ad629986438b3",
+      "power": 1
+    },
+    {
+      "PubKeyStr": "04b9630840f1fb924fa8371f65d42653c20aa8bf2b2346b45236a12428a43a2f1bbbb3bb22b98c3d650ece17ba5ca27ef1acf8671446b94cece6b1448b8bc8f9e4",
+      "power": 1
+    },
+    {
+      "PubKeyStr": "04ec0106a94bc4f7500a742db8cb80588a12d0bf8963e1863ddf44dde499d2f3d72415b3467d6cf25e4bdc9c328c3f34bd28e04435037e66e7a71ebb67a86bfcc3",
+      "power": 1
+    }],
     "geneValidators": [
-      {
-        "PubKeyStr": "0424941e08242174f96e6313846d81662a868a7e3e6a21be6b73b287395b7802c8ee722b2485c8bb32bbf90b3ad827a4f9c0d4032741f318b65c87d490ad8336cf",
-        "power": 1
-      },
-      {
-        "PubKeyStr": "0415050693c163fff2b88b07e7705030e3192c830f4d6484093ebc566da5f8d2137c5f4ae7027aea78cb389b45edc8eddbc7c28b25890f44d6b22ad629986438b3",
-        "power": 1
-      },
-      {
-        "PubKeyStr": "04b9630840f1fb924fa8371f65d42653c20aa8bf2b2346b45236a12428a43a2f1bbbb3bb22b98c3d650ece17ba5ca27ef1acf8671446b94cece6b1448b8bc8f9e4",
-        "power": 1
-      },
-      {
-        "PubKeyStr": "04ec0106a94bc4f7500a742db8cb80588a12d0bf8963e1863ddf44dde499d2f3d72415b3467d6cf25e4bdc9c328c3f34bd28e04435037e66e7a71ebb67a86bfcc3",
-        "power": 1
-      }]
+    {
+      "PubKeyStr": "0424941e08242174f96e6313846d81662a868a7e3e6a21be6b73b287395b7802c8ee722b2485c8bb32bbf90b3ad827a4f9c0d4032741f318b65c87d490ad8336cf",
+      "power": 1
+    },
+    {
+      "PubKeyStr": "0415050693c163fff2b88b07e7705030e3192c830f4d6484093ebc566da5f8d2137c5f4ae7027aea78cb389b45edc8eddbc7c28b25890f44d6b22ad629986438b3",
+      "power": 1
+    },
+    {
+      "PubKeyStr": "04b9630840f1fb924fa8371f65d42653c20aa8bf2b2346b45236a12428a43a2f1bbbb3bb22b98c3d650ece17ba5ca27ef1acf8671446b94cece6b1448b8bc8f9e4",
+      "power": 1
+    },
+    {
+      "PubKeyStr": "04ec0106a94bc4f7500a742db8cb80588a12d0bf8963e1863ddf44dde499d2f3d72415b3467d6cf25e4bdc9c328c3f34bd28e04435037e66e7a71ebb67a86bfcc3",
+      "power": 1
+    }]
   },
   "genesisTime": "2018-09-10T11:38:46.085752504+08:00",
   "recvMsgChan": 10,
-  "ketPairPath": "./node.key"
+  "ketPairPath": "./node.key",
+  "epochServer":
+  {
+    "epochServerPath": "https://127.0.0.1:7000",
+    "caPath": "../ca/rsa/txRootCA.crt"
+  }
+
 }

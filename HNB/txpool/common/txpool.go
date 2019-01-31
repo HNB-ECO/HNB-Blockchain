@@ -1,34 +1,33 @@
 package common
 
 import (
-	"sync"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
-	"errors"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
-	"fmt"
+	"HNB/common"
+	"HNB/logging"
 	"container/list"
+	"errors"
+	"fmt"
+	"sync"
 )
+
 var TXPoolLog logging.LogModule
 
-const(
+const (
 	LOGTABLE_TXPOOL string = "txpool"
 )
 
 type TXPool struct {
 	sync.RWMutex
-	txIndex		map[string]*list.Element
-	txList		*list.List
+	txIndex map[string]*list.Element
+	txList  *list.List
 }
 
 func NewTXPool() *TXPool {
 	TXPoolLog = logging.GetLogIns()
 	return &TXPool{
-		txList: list.New(),
+		txList:  list.New(),
 		txIndex: make(map[string]*list.Element),
 	}
 }
-
-
 
 func (tp *TXPool) GetTxListLen() int {
 	tp.RLock()
@@ -53,7 +52,7 @@ func (tp *TXPool) AddTxToList(tx *common.Transaction) error {
 	}
 	tp.Lock()
 	defer tp.Unlock()
-	if _, ok :=  tp.txIndex[tx.Txid]; ok {
+	if _, ok := tp.txIndex[tx.Txid]; ok {
 		errStr := fmt.Sprintf("tx %s exists", tx.Txid)
 		return errors.New(errStr)
 	}
@@ -66,7 +65,7 @@ func (tp *TXPool) AddTxToList(tx *common.Transaction) error {
 func (tp *TXPool) DelTx(txid string) bool {
 	tp.Lock()
 	defer tp.Unlock()
-	ele, ok :=  tp.txIndex[txid]
+	ele, ok := tp.txIndex[txid]
 	if !ok || ele == nil {
 		infoStr := fmt.Sprintf("tx %s not exists", txid)
 		TXPoolLog.Info(LOGTABLE_TXPOOL, infoStr)
@@ -86,7 +85,7 @@ func (tp *TXPool) DelTxs(txs []*common.Transaction) {
 			TXPoolLog.Warning(LOGTABLE_TXPOOL, infoStr)
 			continue
 		}
-		ele, ok :=  tp.txIndex[tx.Txid]
+		ele, ok := tp.txIndex[tx.Txid]
 		if !ok || ele == nil {
 			infoStr := fmt.Sprintf("tx %s not exists", tx.Txid)
 			TXPoolLog.Info(LOGTABLE_TXPOOL, infoStr)
@@ -103,7 +102,7 @@ func (tp *TXPool) DelTxsWithTxId(txids []string) {
 	tp.Lock()
 	defer tp.Unlock()
 	for _, txid := range txids {
-		ele, ok :=  tp.txIndex[txid]
+		ele, ok := tp.txIndex[txid]
 		if !ok || ele == nil {
 			infoStr := fmt.Sprintf("tx %s not exists", txid)
 			TXPoolLog.Info(LOGTABLE_TXPOOL, infoStr)
@@ -116,7 +115,7 @@ func (tp *TXPool) DelTxsWithTxId(txids []string) {
 
 }
 
-func (tp *TXPool) GetTxsFromTXPool(count int) ([]*common.Transaction, error)  {
+func (tp *TXPool) GetTxsFromTXPool(count int) ([]*common.Transaction, error) {
 	if count <= 0 {
 		errStr := fmt.Sprintf("tx count can not <= 0")
 		return nil, errors.New(errStr)
@@ -126,14 +125,14 @@ func (tp *TXPool) GetTxsFromTXPool(count int) ([]*common.Transaction, error)  {
 	if txListLen <= 0 {
 		infoStr := fmt.Sprintf("no tx in txpool")
 		TXPoolLog.Info(LOGTABLE_TXPOOL, infoStr)
-		return nil, nil
+		return nil, errors.New("empty tx")
 	}
 	if txListLen < targetCount {
 		targetCount = txListLen
 	}
 	txs := make([]*common.Transaction, 0)
 	txcount := 0
-	for ele := tp.txList.Front(); (ele!= nil)&&(txcount<targetCount); ele = ele.Next() {
+	for ele := tp.txList.Front(); (ele != nil) && (txcount < targetCount); ele = ele.Next() {
 		tx, ok := ele.Value.(*common.Transaction)
 		if !ok {
 			errStr := fmt.Sprintf("tx parse err")
@@ -144,4 +143,3 @@ func (tp *TXPool) GetTxsFromTXPool(count int) ([]*common.Transaction, error)  {
 	}
 	return txs, nil
 }
-

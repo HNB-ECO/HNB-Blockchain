@@ -1,9 +1,6 @@
 package common
 
-
-
-
-type StateSet struct{
+type StateSet struct {
 	SI []*StateItem
 }
 
@@ -17,10 +14,10 @@ const (
 
 //State item struct
 type StateItem struct {
-	Key   []byte            //State key
-	Value []byte 			//State value
-	State ItemState         //Status
-	Trie  bool              //no use
+	Key     []byte    //State key
+	Value   []byte    //State value
+	State   ItemState //Status
+	Trie    bool      //no use
 	ChainID string
 }
 

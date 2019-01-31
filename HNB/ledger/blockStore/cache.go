@@ -1,8 +1,8 @@
 package blockStore
 
 import (
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"HNB/ledger/blockStore/common"
+	"HNB/logging"
 	"github.com/bluele/gcache"
 )
 
@@ -26,8 +26,8 @@ func NewBlockCache() *blockCache {
 //batch操作
 
 func (bc *blockCache) WriteBlock(block *common.Block) error {
-	BlockLog.Debugf(LOGTABLE_BLOCK, "write block cache blkNum:%v", block.BlockNum)
-	return bc.cache.Set(block.BlockNum, block)
+	BlockLog.Debugf(LOGTABLE_BLOCK, "write block cache blkNum:%v", block.Header.BlockNum)
+	return bc.cache.Set(block.Header.BlockNum, block)
 }
 
 func (bc *blockCache) RollbackBlock(blkNum uint64) error {

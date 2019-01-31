@@ -1,9 +1,9 @@
 package peer
 
 import (
+	"HNB/p2pNetwork/common"
+	"HNB/p2pNetwork/message/bean"
 	"fmt"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
 	"sync"
 )
 
@@ -96,7 +96,8 @@ func (np *NbrPeers) GetNeighborAddrs() []common.PeerAddr {
 		addr.IpAddr, _ = p.GetAddr16()
 		addr.Time = p.GetTimeStamp()
 		addr.Services = p.GetServices()
-		addr.Port = p.GetSyncPort()
+		addr.ConsensusPort = p.GetConsPort()
+		addr.SyncPort = p.GetSyncPort()
 		addr.ID = p.GetID()
 		addrs = append(addrs, addr)
 	}

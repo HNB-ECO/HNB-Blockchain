@@ -1,8 +1,8 @@
 package common
 
 import (
-	txComm "github.com/HNB-ECO/HNB-Blockchain/HNB/common"
-	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
+	txComm "HNB/common"
+	"HNB/util"
 )
 
 type Header struct {

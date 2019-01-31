@@ -1,8 +1,8 @@
 package msp
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 func TestSign(t *testing.T) {
@@ -24,7 +24,7 @@ func TestSign(t *testing.T) {
 	}
 	fmt.Println(data)
 	keyStr := PubKeyToString(keyPair.Scheme, keyPair.PubKey)
-	keyO := GetBccspKeyFromPubKey(keyStr)
-	ok , err := Verify(keyO, data, []byte("123"))
+	keyO := StringToBccspKey(keyStr)
+	ok, err := Verify(keyO, data, []byte("123"))
 	fmt.Println(ok, err)
 }
