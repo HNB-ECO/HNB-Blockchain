@@ -54,6 +54,7 @@ type GenesisValidator struct {
 }
 
 type AllConfig struct {
+	RunMode                   string    `json:"runMode"`
 	Log                       LogConfig `json:"logConfig"`
 	SeedList                  []string  `json:"seedList"`
 	MaxConnOutBound           uint      `json:"maxConnOutBound"`
@@ -79,7 +80,12 @@ type AllConfig struct {
 	// 创世块时间戳
 	GenesisTime time.Time `json:"genesisTime"`
 	// 接收共识消息管道长度
-	RecvMsgChan int `json:"recvMsgChan,omitempty"`
+	RecvMsgChan int          `json:"recvMsgChan,omitempty"`
+	EpochServer *EpochServer `json:"epochServer"`
+}
+type EpochServer struct {
+	EpochServerPath string `json:"epochServerPath"`
+	CaPath          string `json:"caPath"`
 }
 
 type LogConfig struct {
@@ -116,4 +122,3 @@ func LoadConfig(path string) {
 		panic("config load fail: " + err.Error())
 	}
 }
-
