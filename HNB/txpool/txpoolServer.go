@@ -1,15 +1,15 @@
 package txpool
 
 import (
-	"HNB/common"
-	"HNB/logging"
-	"HNB/p2pNetwork"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
 	"github.com/pkg/errors"
-	//"HNB/p2pNetwork/message/reqMsg"
+	//"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
 	//"encoding/json"
-	"HNB/p2pNetwork/message/reqMsg"
 	"encoding/json"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
 )
 
 var TXPoolLog logging.LogModule
@@ -58,7 +58,7 @@ func (tps *TXPoolServer) RecvTx(msg []byte, msgSender uint64) error {
 		err = tps.txpool.AddRemote(&tx)
 	}
 
-	if err != nil{
+	if err != nil {
 		return err
 	}
 

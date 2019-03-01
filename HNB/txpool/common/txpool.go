@@ -1,11 +1,11 @@
 package common
 
 import (
-	"HNB/common"
-	"HNB/logging"
 	"container/list"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"sync"
 )
 

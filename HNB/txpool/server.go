@@ -1,7 +1,7 @@
 package txpool
 
 import (
-	"HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 )
 
 type TXPoolInf interface {

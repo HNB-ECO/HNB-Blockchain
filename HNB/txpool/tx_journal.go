@@ -1,8 +1,8 @@
 package txpool
 
 import (
-	"HNB/common"
 	"errors"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 	"io"
 )
 

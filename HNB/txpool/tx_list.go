@@ -1,8 +1,8 @@
 package txpool
 
 import (
-	"HNB/common"
 	"container/heap"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 	"math/big"
 	"sort"
 )
