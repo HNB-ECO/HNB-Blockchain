@@ -1,8 +1,8 @@
 package sync
 
 import (
-	syncComm "HNB/sync/common"
 	"fmt"
+	syncComm "github.com/HNB-ECO/HNB-Blockchain/HNB/sync/common"
 )
 
 func (sh *SyncHandler) GetSyncState(chainID string) (uint8, error) {

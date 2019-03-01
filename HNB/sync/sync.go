@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
-	appComm "HNB/appMgr/common"
-	"HNB/logging"
-	"HNB/p2pNetwork"
-	syncComm "HNB/sync/common"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
+	syncComm "github.com/HNB-ECO/HNB-Blockchain/HNB/sync/common"
 )
 
 var syncLogger logging.LogModule

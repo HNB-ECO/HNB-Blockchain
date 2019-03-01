@@ -1,7 +1,7 @@
 package common
 
 import (
-	ledger "HNB/ledger/blockStore/common"
+	ledger "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
 )
 
 type SyncInfo struct {
