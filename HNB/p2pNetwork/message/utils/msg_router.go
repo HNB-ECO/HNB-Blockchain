@@ -1,11 +1,11 @@
 package utils
 
 import (
-	"HNB/logging"
-	msgCommon "HNB/p2pNetwork/common"
-	"HNB/p2pNetwork/message/bean"
-	"HNB/p2pNetwork/server"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	msgCommon "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/server"
 )
 
 var P2PLog logging.LogModule

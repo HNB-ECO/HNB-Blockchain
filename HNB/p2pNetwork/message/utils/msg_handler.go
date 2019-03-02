@@ -1,10 +1,10 @@
 package utils
 
 import (
-	msgCommon "HNB/p2pNetwork/common"
-	msgTypes "HNB/p2pNetwork/message/bean"
-	"HNB/p2pNetwork/message/reqMsg"
-	"HNB/p2pNetwork/server"
+	msgCommon "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	msgTypes "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/server"
 	"net"
 	"strconv"
 	"time"

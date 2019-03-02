@@ -1,9 +1,9 @@
 package reqMsg
 
 import (
-	msgCommon "HNB/p2pNetwork/common"
-	mt "HNB/p2pNetwork/message/bean"
-	"HNB/p2pNetwork/server"
+	msgCommon "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	mt "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/server"
 	"time"
 )
 

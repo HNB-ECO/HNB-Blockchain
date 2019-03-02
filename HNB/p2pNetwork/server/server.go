@@ -1,9 +1,9 @@
 package server
 
 import (
-	"HNB/p2pNetwork/common"
-	"HNB/p2pNetwork/message/bean"
-	"HNB/p2pNetwork/peer"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/peer"
 )
 
 type P2P interface {

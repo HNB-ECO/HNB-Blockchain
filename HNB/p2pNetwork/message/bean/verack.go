@@ -1,10 +1,10 @@
 package bean
 
 import (
-	"HNB/p2pNetwork/common"
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
 )
 
 type VerACK struct {

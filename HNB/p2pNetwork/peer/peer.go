@@ -1,12 +1,12 @@
 package peer
 
 import (
-	"HNB/logging"
-	"HNB/p2pNetwork/common"
-	"HNB/p2pNetwork/message/bean"
-	conn "HNB/p2pNetwork/receive"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
+	conn "github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/receive"
 	"net"
 	"runtime"
 	"sync"

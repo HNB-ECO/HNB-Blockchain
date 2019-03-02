@@ -1,9 +1,9 @@
 package bean
 
 import (
-	"HNB/p2pNetwork/common"
 	"encoding/json"
 	"errors"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
 )
 
 type TestNetwork struct {

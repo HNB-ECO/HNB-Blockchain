@@ -1,9 +1,9 @@
 package peer
 
 import (
-	"HNB/p2pNetwork/common"
-	"HNB/p2pNetwork/message/bean"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/bean"
 	"sync"
 )
 
