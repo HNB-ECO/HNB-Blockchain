@@ -1,8 +1,8 @@
 package rest
 
 import (
-	"HNB/ledger"
-	"HNB/util"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"bytes"
 	"encoding/json"
 	"fmt"

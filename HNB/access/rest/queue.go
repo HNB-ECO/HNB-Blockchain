@@ -1,9 +1,9 @@
 package rest
 
 import (
-	"HNB/common"
-	"HNB/txpool"
-	"HNB/util"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/txpool"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"bytes"
 	"encoding/json"
 	"errors"

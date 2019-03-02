@@ -1,8 +1,8 @@
 package rest
 
 import (
-	"HNB/config"
-	"HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"encoding/json"
 	"fmt"
 	"github.com/gocraft/web"

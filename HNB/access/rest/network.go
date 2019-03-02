@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"HNB/p2pNetwork"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
 	"encoding/json"
 )
 

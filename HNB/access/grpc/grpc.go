@@ -1,9 +1,9 @@
 package grpc
 
 import (
-	"HNB/access/grpc/proto"
-	"HNB/config"
-	"HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/access/grpc/proto"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"crypto/tls"
 	"fmt"
 	"golang.org/x/net/context"
@@ -76,4 +76,3 @@ func (s *serverHandle) Chat(ctx context.Context, mr *proto.MsgReq) (*proto.MsgRe
 
 	return &proto.MsgRes{}, nil
 }
-
