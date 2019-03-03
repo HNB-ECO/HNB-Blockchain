@@ -1,8 +1,8 @@
 package types
 
 import (
-	cmn "HNB/consensus/algorand/common"
-	"HNB/ledger/merkle"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
 )
 
 const (

@@ -1,6 +1,6 @@
 package common
 
-import "HNB/consensus/algorand/types"
+import "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
 
 //  todo
 func GetEpochWitnessesLen(epochNo uint64) int {

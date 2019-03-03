@@ -1,15 +1,15 @@
 package types
 
 import (
-	"HNB/bccsp"
-	"HNB/bccsp/sw"
-	"HNB/common"
-	"HNB/ledger"
-	bsComm "HNB/ledger/blockStore/common"
-	"HNB/msp"
-	"HNB/util"
 	"crypto/elliptic"
 	"encoding/json"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	bsComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"github.com/json-iterator/go"
 	"github.com/tendermint/go-amino"
 )

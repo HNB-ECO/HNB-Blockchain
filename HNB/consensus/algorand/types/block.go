@@ -1,13 +1,13 @@
 package types
 
 import (
-	cmn "HNB/consensus/algorand/common"
-	"HNB/ledger/merkle"
-	"HNB/msp"
-	"HNB/util"
 	"bytes"
 	"errors"
 	"fmt"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"strconv"
 	"strings"
 	"sync"

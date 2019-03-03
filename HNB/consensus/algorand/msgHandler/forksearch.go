@@ -1,11 +1,11 @@
 package msgHandler
 
 import (
-	tendermint "HNB/consensus/algorand/common"
-	"HNB/p2pNetwork"
-	"HNB/p2pNetwork/message/reqMsg"
-	"HNB/util"
 	"encoding/json"
+	tendermint "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"github.com/op/go-logging"
 
 	"sync"
@@ -20,8 +20,8 @@ import (
 
 	"fmt"
 
-	"HNB/consensus/consensusManager/comm/consensusType"
-	"HNB/ledger"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/consensusManager/comm/consensusType"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
 )
 
 type ForkSearchWorker struct {

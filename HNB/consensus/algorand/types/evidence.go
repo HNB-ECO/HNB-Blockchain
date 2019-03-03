@@ -1,11 +1,11 @@
 package types
 
 import (
-	"HNB/ledger/merkle"
 	"bytes"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
 
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
 // ErrEvidenceInvalid wraps a piece of evidence and the error denoting how or why it is invalid.
@@ -93,7 +93,6 @@ func (dve *DuplicateVoteEvidence) Verify(chainID string) error {
 	if dve.VoteA.BlockID.Equals(dve.VoteB.BlockID) {
 		return fmt.Errorf("DuplicateVoteEvidence Error: BlockIDs are the same (%v) - not a real duplicate vote", dve.VoteA.BlockID)
 	}
-
 
 	return nil
 }

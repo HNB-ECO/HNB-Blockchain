@@ -1,33 +1,32 @@
-
 package dbft
 
 import (
-	"HNB/config"
-	"HNB/msp"
-	"HNB/p2pNetwork"
-	"HNB/p2pNetwork/message/reqMsg"
 	"encoding/json"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
 	"github.com/json-iterator/go"
 
-	tdmCmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/types"
-	"HNB/consensus/dbft/util"
+	tdmCmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/dbft/util"
 	"time"
 
-	appComm "HNB/appMgr/common"
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/consensusManager/comm/consensusType"
-	dposCom "HNB/consensus/dbft/common"
 	"errors"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/consensusManager/comm/consensusType"
+	dposCom "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/dbft/common"
 
 	"bytes"
 
-	tdmMsgHandler "HNB/consensus/algorand/msgHandler"
+	tdmMsgHandler "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/msgHandler"
 
-	tdmStatus "HNB/consensus/algorand/state"
-	"HNB/ledger"
-	"HNB/txpool"
+	tdmStatus "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/state"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/txpool"
 	"sort"
 )
 
@@ -57,18 +56,18 @@ type DBFTManager struct {
 	PosVoteTable  string
 	PosAssetTable string
 	PosEpochTable string
-	bftHandler *tdmMsgHandler.TDMMsgHandler
+	bftHandler    *tdmMsgHandler.TDMMsgHandler
 
-	candidateNo  util.AtomicNo
-	epoch        *Epoch
-	epochList    *EpochListCache
-	witnessesNum int
-	EpochChange  *EpochChangeMap
-	NewEpoch     *NewEpochMap
+	candidateNo        util.AtomicNo
+	epoch              *Epoch
+	epochList          *EpochListCache
+	witnessesNum       int
+	EpochChange        *EpochChangeMap
+	NewEpoch           *NewEpochMap
 	newEpochNotify     *NewEpochNotify
 	epochChangeCache   *EpochChangeCache
 	EpochChangeTimeout int64
-	FullBlkChangeChan chan uint64
+	FullBlkChangeChan  chan uint64
 
 	votedCache map[int64]bool
 

@@ -1,12 +1,12 @@
 package msgHandler
 
 import (
-	tdmComm "HNB/consensus/algorand/common"
-	"HNB/consensus/consensusManager/comm/consensusType"
-	"HNB/ledger"
-	"HNB/sync"
-	psync "HNB/sync/common"
 	"fmt"
+	tdmComm "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/consensusManager/comm/consensusType"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/sync"
+	psync "github.com/HNB-ECO/HNB-Blockchain/HNB/sync/common"
 	"github.com/json-iterator/go"
 )
 

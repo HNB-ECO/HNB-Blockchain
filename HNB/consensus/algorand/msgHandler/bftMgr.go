@@ -1,22 +1,22 @@
 package msgHandler
 
 import (
-	appComm "HNB/appMgr/common"
-	"HNB/config"
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/state"
-	"HNB/consensus/algorand/types"
-	"HNB/consensus/consensusManager/comm/consensusType"
-	"HNB/ledger"
-	"HNB/msp"
-	"HNB/p2pNetwork"
-	"HNB/p2pNetwork/message/reqMsg"
-	"HNB/txpool"
-	"HNB/util"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/state"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/consensusManager/comm/consensusType"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/txpool"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"github.com/json-iterator/go"
 	"sync"
 	"sync/atomic"
@@ -31,27 +31,27 @@ const VP = "1"
 type BftMgr struct {
 	cmn.BaseService
 
-	EventMsgQueue    chan *cmn.PeerMessage
-	PeerMsgQueue     chan *cmn.PeerMessage
-	InternalMsgQueue chan *cmn.PeerMessage
-	TotalValidators *types.ValidatorSet
-	BftNumber uint8
-	ID uint64
-	CandidateID uint64
-	CurBftGroup BftGroup
-	BgCandidate      map[uint64][]*cmn.BftGroupSwitchAdvice
-	bgCandidateMutex sync.RWMutex
-	BgAdvice      map[uint64][]*cmn.BftGroupSwitchAdvice
-	bgAdviceMutex sync.RWMutex
-	BgDemand      map[uint64]*cmn.BftGroupSwitchDemand
-	bgDemandMutex sync.RWMutex
-	bgChangeCache map[uint64]bool
-	BlkTimeout int64
-	BlkTimeoutTimer *time.Timer
-	BlkTimeoutCount uint8
-	CurHeight uint64
-	MsgHandler *TDMMsgHandler
-	BgDemandTimeout int64
+	EventMsgQueue        chan *cmn.PeerMessage
+	PeerMsgQueue         chan *cmn.PeerMessage
+	InternalMsgQueue     chan *cmn.PeerMessage
+	TotalValidators      *types.ValidatorSet
+	BftNumber            uint8
+	ID                   uint64
+	CandidateID          uint64
+	CurBftGroup          BftGroup
+	BgCandidate          map[uint64][]*cmn.BftGroupSwitchAdvice
+	bgCandidateMutex     sync.RWMutex
+	BgAdvice             map[uint64][]*cmn.BftGroupSwitchAdvice
+	bgAdviceMutex        sync.RWMutex
+	BgDemand             map[uint64]*cmn.BftGroupSwitchDemand
+	bgDemandMutex        sync.RWMutex
+	bgChangeCache        map[uint64]bool
+	BlkTimeout           int64
+	BlkTimeoutTimer      *time.Timer
+	BlkTimeoutCount      uint8
+	CurHeight            uint64
+	MsgHandler           *TDMMsgHandler
+	BgDemandTimeout      int64
 	BgDemandReceiveChan  map[uint64]chan uint64
 	bgDemandReceiveMutex sync.RWMutex
 }

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	cmn "HNB/consensus/algorand/common"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
 )
 
 type RoundVoteSet struct {

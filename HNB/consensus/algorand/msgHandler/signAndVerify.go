@@ -1,10 +1,10 @@
 package msgHandler
 
 import (
-	cmn "HNB/consensus/algorand/common"
-	"HNB/msp"
 	"encoding/json"
 	"fmt"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 )
 
 func (h *TDMMsgHandler) Sign(message *cmn.TDMMessage) (*cmn.TDMMessage, error) {

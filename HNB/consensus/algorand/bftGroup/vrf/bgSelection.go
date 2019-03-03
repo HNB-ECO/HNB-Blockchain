@@ -1,10 +1,10 @@
 package vrf
 
 import (
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/types"
 	"crypto/sha512"
 	"fmt"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
 )
 
 func CalcBFTGroupMembersByVRF(VRFValue []byte, candidates []*cmn.BftGroupSwitchAdvice, groupSize int) ([]*cmn.BftGroupSwitchAdvice, error) {

@@ -1,7 +1,7 @@
 package msgHandler
 
 import (
-	cmn "HNB/consensus/algorand/common"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
 )
 
 func (h *TDMMsgHandler) HandleVoteSetBitsMsg(tdmMsg *cmn.TDMMessage) error {

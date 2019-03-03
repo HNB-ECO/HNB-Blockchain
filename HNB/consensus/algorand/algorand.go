@@ -1,17 +1,17 @@
 package algorand
 
 import (
-	appComm "HNB/appMgr/common"
-	"HNB/common"
-	"HNB/config"
-	"HNB/consensus/algorand/msgHandler"
-	"HNB/consensus/algorand/state"
-	"HNB/consensus/algorand/types"
-	"HNB/ledger"
-	bsComm "HNB/ledger/blockStore/common"
-	"HNB/logging"
-	"HNB/msp"
 	"fmt"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/msgHandler"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/state"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	bsComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 	"sort"
 	"time"
 )
@@ -207,16 +207,16 @@ func (cons *Core) MakeGenesisLastCommitState(blk *bsComm.Block) (*state.State, e
 	validatorSet.BgVRFProof = tdmBlk.Validators.BgVRFProof
 
 	return &state.State{
-		LastBlockNum:  0,
-		LastBlockID:   types.BlockID{},
-		LastBlockTime: config.Config.GenesisTime,
-		Validators:    validatorSet,
+		LastBlockNum:                     0,
+		LastBlockID:                      types.BlockID{},
+		LastBlockTime:                    config.Config.GenesisTime,
+		Validators:                       validatorSet,
 		LastValidators:                   types.NewValidatorSet(nil, 0, nil, nil, nil),
 		LastHeightValidatorsChanged:      0,
 		LastHeightConsensusParamsChanged: 0,
-		PreviousHash: preblkHash,
-		PrevVRFProof: tdmBlk.BlkVRFProof,
-		PrevVRFValue: tdmBlk.BlkVRFValue,
+		PreviousHash:                     preblkHash,
+		PrevVRFProof:                     tdmBlk.BlkVRFProof,
+		PrevVRFValue:                     tdmBlk.BlkVRFValue,
 	}, nil
 }
 
@@ -225,8 +225,8 @@ func (cons *Core) LoadGeneValidators() (*types.ValidatorSet, error) {
 	for i, val := range config.Config.GeneBftGroup {
 		digestAddr := msp.AccountPubkeyToAddress1(msp.StringToBccspKey(val.PubKeyStr))
 		validators[i] = &types.Validator{
-			Address:   types.Address(digestAddr.GetBytes()),
-			PubKeyStr: val.PubKeyStr,
+			Address:     types.Address(digestAddr.GetBytes()),
+			PubKeyStr:   val.PubKeyStr,
 			VotingPower: int64(val.Power),
 		}
 	}

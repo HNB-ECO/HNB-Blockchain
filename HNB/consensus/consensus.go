@@ -1,9 +1,9 @@
 package consensus
 
 import (
-	"HNB/consensus/algorand"
-	"HNB/consensus/dbft"
-	"HNB/consensus/solo"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/dbft"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/solo"
 )
 
 const (

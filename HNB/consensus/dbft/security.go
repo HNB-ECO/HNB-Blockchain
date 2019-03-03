@@ -1,10 +1,10 @@
 package dbft
 
 import (
-	dpos "HNB/consensus/dbft/common"
-	"HNB/msp"
 	"encoding/json"
 	"fmt"
+	dpos "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/dbft/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 )
 
 func (dbftMgr *DBFTManager) Sign(message *dpos.DPoSMessage) (*dpos.DPoSMessage, error) {

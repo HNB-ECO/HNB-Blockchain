@@ -1,23 +1,23 @@
 package msgHandler
 
 import (
-	"HNB/appMgr"
-	appComm "HNB/appMgr/common"
-	"HNB/config"
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/state"
-	"HNB/consensus/algorand/types"
-	"HNB/ledger"
-	bsComm "HNB/ledger/blockStore/common"
-	"HNB/logging"
-	"HNB/msp"
-	"HNB/p2pNetwork"
-	psync "HNB/sync/common"
-	"HNB/txpool"
-	"HNB/util"
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/state"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	bsComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
+	psync "github.com/HNB-ECO/HNB-Blockchain/HNB/sync/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/txpool"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"sync"
 	"time"
 )
@@ -49,17 +49,17 @@ type TDMMsgHandler struct {
 
 	mtx sync.Mutex
 	types.RoundState
-	LastCommitState  state.State //state for height-1
-	timeState        *TimeStatistic
-	done             chan struct{}
-	allRoutineExitWg sync.WaitGroup
-	writeBlock       func(blk *bsComm.Block) error
-	syncHandler       *SyncHandler
-	recvSyncChan      chan *psync.SyncNotify
-	syncTimer         *time.Timer
-	syncTimeout       time.Duration
-	cacheSyncBlkCount map[string]*SyncBlkCount
-	isSyncStatus      *cmn.MutexBool
+	LastCommitState     state.State //state for height-1
+	timeState           *TimeStatistic
+	done                chan struct{}
+	allRoutineExitWg    sync.WaitGroup
+	writeBlock          func(blk *bsComm.Block) error
+	syncHandler         *SyncHandler
+	recvSyncChan        chan *psync.SyncNotify
+	syncTimer           *time.Timer
+	syncTimeout         time.Duration
+	cacheSyncBlkCount   map[string]*SyncBlkCount
+	isSyncStatus        *cmn.MutexBool
 	IsVoteBroadcast     bool
 	heightReq           *HeightReq
 	heightReqOutBg      *HeightReqOutBg

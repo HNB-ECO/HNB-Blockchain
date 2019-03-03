@@ -1,18 +1,18 @@
 package msgHandler
 
 import (
-	appComm "HNB/appMgr/common"
-	"HNB/config"
-	"HNB/consensus/algorand/bftGroup/vrf"
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/types"
-	"HNB/consensus/consensusManager/comm/consensusType"
-	"HNB/msp"
-	"HNB/txpool"
-	"HNB/util"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/bftGroup/vrf"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/consensusManager/comm/consensusType"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/txpool"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 )
 
 func (h *TDMMsgHandler) enterPropose(height uint64, round int32) {
@@ -41,7 +41,6 @@ func (h *TDMMsgHandler) enterPropose(height uint64, round int32) {
 			h.enterPrevote(height, h.Round)
 		}
 	}()
-
 
 	h.scheduleTimeout(h.AddTimeOut(timeoutPropose), height, round, types.RoundStepPropose)
 	// If we don't get the proposal and all block parts quick enough, enterPrevote
@@ -159,7 +158,6 @@ func (h *TDMMsgHandler) createProposalBlock() (block *types.Block, blockParts *t
 		ConsLog.Errorf(LOGTABLE_CONS, "enterPropose: Cannot propose anything: No commit for the previous block.")
 		return
 	}
-
 
 	var txs []types.Tx
 	txPool, err := txpool.GetTxsFromTXPool(appComm.HNB, 1000)

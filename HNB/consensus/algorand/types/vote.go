@@ -1,11 +1,11 @@
 package types
 
 import (
-	cmn "HNB/consensus/algorand/common"
-	"HNB/util"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"github.com/pkg/errors"
 	"strings"
 	"sync"

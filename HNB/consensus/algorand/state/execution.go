@@ -1,7 +1,7 @@
 package state
 
 import (
-	"HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
 )
 
 type BlockExecutor struct {

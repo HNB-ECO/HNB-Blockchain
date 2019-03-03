@@ -1,10 +1,10 @@
 package types
 
 import (
-	"HNB/bccsp"
-	"HNB/consensus/algorand/common"
-	"HNB/util"
 	"encoding/hex"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"strings"
 	"sync"
 	"time"

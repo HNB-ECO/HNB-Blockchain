@@ -1,7 +1,7 @@
 package common
 
 import (
-	lgCom "HNB/ledger/blockStore/common"
+	lgCom "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
 )
 
 type PeerMessage struct {

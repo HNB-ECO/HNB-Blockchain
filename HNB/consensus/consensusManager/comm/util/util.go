@@ -1,13 +1,13 @@
 package util
 
 import (
-	"HNB/config"
-	"HNB/consensus/algorand/types"
-	"HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 )
 
 const (
-	VP                 = "1"
+	VP = "1"
 )
 
 func LoadTotalValidators() ([]*types.Validator, error) {

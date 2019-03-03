@@ -1,13 +1,13 @@
 package dbft
 
 import (
-	"HNB/appMgr"
-	appComm "HNB/appMgr/common"
-	"HNB/config"
-	"HNB/consensus/algorand/msgHandler"
-	"HNB/consensus/algorand/types"
-	"HNB/txpool"
 	"bytes"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/msgHandler"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/txpool"
 )
 
 func (dbftMgr *DBFTManager) isProposerByDPoS(h *msgHandler.TDMMsgHandler, height uint64, round int32) (bool, *types.Validator) {

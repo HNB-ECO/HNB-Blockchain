@@ -1,15 +1,15 @@
 package msgHandler
 
 import (
-	"HNB/config"
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/state"
-	"HNB/consensus/algorand/types"
-	"HNB/consensus/consensusManager/comm/consensusType"
-	"HNB/msp"
-	"HNB/util"
 	"encoding/json"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/state"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/consensusManager/comm/consensusType"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"time"
 )
 

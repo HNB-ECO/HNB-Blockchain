@@ -1,10 +1,10 @@
 package common
 
 import (
-	"HNB/ledger/merkle"
-	"HNB/msp"
 	"crypto/sha256"
 	"encoding/json"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 )
 
 func Hash256Byte(v interface{}) []byte {

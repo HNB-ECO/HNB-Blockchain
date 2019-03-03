@@ -1,10 +1,10 @@
 package msgHandler
 
 import (
-	"HNB/consensus/algorand/state"
-	"HNB/consensus/algorand/types"
-	"HNB/ledger"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/state"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
 	"time"
 )
 

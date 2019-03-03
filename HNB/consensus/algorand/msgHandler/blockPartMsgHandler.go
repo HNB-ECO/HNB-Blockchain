@@ -1,11 +1,11 @@
 package msgHandler
 
 import (
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/types"
-	"HNB/ledger/merkle"
 	"encoding/json"
 	"fmt"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
 )
 
 func (h *TDMMsgHandler) HandleBlockPartMsg(tdmMsg *cmn.TDMMessage) error {

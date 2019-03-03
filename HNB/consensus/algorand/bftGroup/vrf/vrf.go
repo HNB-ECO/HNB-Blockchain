@@ -1,10 +1,6 @@
 package vrf
 
 import (
-	"HNB/bccsp"
-	"HNB/bccsp/factory"
-	"HNB/bccsp/sw"
-	"HNB/msp"
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -15,9 +11,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/factory"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 	"hash"
 	"math/big"
-	"HNB/bccsp/secp256k1"
 )
 
 var (

@@ -1,11 +1,11 @@
 package dbft
 
 import (
-	"HNB/config"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
 	"io/ioutil"
 	"net/http"
 	"strconv"

@@ -6,7 +6,7 @@ import (
 
 	"encoding/json"
 
-	"HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
 )
 
 // database keys

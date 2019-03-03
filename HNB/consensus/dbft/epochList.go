@@ -1,8 +1,8 @@
 package dbft
 
 import (
-	"HNB/logging"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"sync"
 )
 

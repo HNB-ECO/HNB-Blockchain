@@ -1,8 +1,8 @@
 package types
 
 import (
-	cmn "HNB/consensus/algorand/common"
 	"fmt"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
 	"time"
 )
 

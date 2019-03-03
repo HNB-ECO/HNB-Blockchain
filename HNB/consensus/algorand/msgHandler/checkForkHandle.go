@@ -1,15 +1,15 @@
 package msgHandler
 
 import (
-	appComm "HNB/appMgr/common"
-	tdm "HNB/consensus/algorand/common"
-	"HNB/consensus/consensusManager/comm/consensusType"
-	"HNB/ledger"
-	"HNB/p2pNetwork"
-	"HNB/p2pNetwork/message/reqMsg"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	tdm "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/consensusManager/comm/consensusType"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
 	"math/rand"
 )
 

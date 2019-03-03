@@ -1,15 +1,15 @@
 package dbft
 
 import (
-	"HNB/consensus/algorand/types"
-	dposStruct "HNB/consensus/dbft/common"
-	"HNB/db"
-	"HNB/ledger"
-	"HNB/util"
 	"bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	dposStruct "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/dbft/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/db"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"github.com/json-iterator/go"
 	"sort"
 	"strconv"

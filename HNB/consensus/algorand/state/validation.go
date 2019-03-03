@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
 )
 
 func ValidateBlock(s State, b *types.Block) error {

@@ -1,9 +1,9 @@
 package msgHandler
 
 import (
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/types"
 	"encoding/json"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
 )
 
 func (h *TDMMsgHandler) HandleProposalPOLMsg(tdmMsg *cmn.TDMMessage) error {

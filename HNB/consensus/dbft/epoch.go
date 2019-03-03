@@ -1,9 +1,9 @@
 package dbft
 
 import (
-	"HNB/consensus/algorand/types"
-	"HNB/util"
 	"bytes"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 )
 
 type EpochQueryInfo struct {
@@ -14,7 +14,6 @@ type EpochQueryInfo struct {
 	TargetBlkNum  int    `json:"target_blk_num"`
 	WitnessList   string `json:"witness_list"`
 }
-
 
 type Epoch struct {
 	EpochNo       uint64             `json:"epoch_no"`

@@ -1,7 +1,7 @@
 package msgHandler
 
 import (
-	"HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
 )
 
 func (h *TDMMsgHandler) RegisterIsProposerFunc(isProposerFunc func(tdmMsgHander *TDMMsgHandler, height uint64, round int32) (bool, *types.Validator)) {

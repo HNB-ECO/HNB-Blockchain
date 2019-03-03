@@ -1,9 +1,9 @@
 package msgHandler
 
 import (
-	"HNB/consensus/algorand/types"
-	"HNB/util"
 	"bytes"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 )
 
 type BftGroup struct {

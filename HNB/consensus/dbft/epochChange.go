@@ -1,19 +1,19 @@
 package dbft
 
 import (
-	"HNB/consensus/algorand/types"
-	"HNB/consensus/consensusManager/comm/consensusType"
-	dbftComm "HNB/consensus/dbft/common"
-	dposMsg "HNB/consensus/dbft/common"
-	"HNB/ledger"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/consensusManager/comm/consensusType"
+	dbftComm "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/dbft/common"
+	dposMsg "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/dbft/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
 	"sync"
 
 	"github.com/json-iterator/go"
 
-	cmn "HNB/consensus/algorand/common"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
 )
 
 type EpochChangeMap struct {

@@ -1,8 +1,8 @@
 package msgHandler
 
 import (
-	cmn "HNB/consensus/algorand/common"
 	"encoding/json"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
 )
 
 func (h *TDMMsgHandler) HandleNewRoundStepMsg(tdmMsg *cmn.TDMMessage) error {

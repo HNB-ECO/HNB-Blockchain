@@ -1,8 +1,8 @@
 package msgHandler
 
 import (
-	"HNB/consensus/algorand/types"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
 	"time"
 )
 

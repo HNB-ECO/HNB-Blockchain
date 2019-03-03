@@ -1,11 +1,11 @@
 package types
 
 import (
-	"HNB/ledger/merkle"
-	"HNB/msp"
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 )
 
 // Tx is an arbitrary byte array.

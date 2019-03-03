@@ -1,25 +1,25 @@
 package dbft
 
 import (
-	"HNB/consensus/algorand/state"
-	"HNB/consensus/algorand/types"
-	"HNB/db"
-	"HNB/msp"
 	"encoding/json"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/state"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/db"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 	"strconv"
 	"time"
 
-	"HNB/consensus/algorand"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand"
 
-	"HNB/consensus/algorand/msgHandler"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/msgHandler"
 
-	appComm "HNB/appMgr/common"
-	"HNB/common"
-	"HNB/config"
-	"HNB/ledger"
-	bsComm "HNB/ledger/blockStore/common"
-	"HNB/logging"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	bsComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"github.com/json-iterator/go"
 )
 
@@ -104,7 +104,6 @@ func (dbftCore *DBFTCore) NewConsensusCore() error {
 
 	handler.RegisterStatusUpdatedFunc("checkEpoch", dbftMgr.CheckEpochChange)
 	handler.RegisterStatusUpdatedFunc("coinbase", dbftMgr.CoinBase)
-
 
 	dbftMgr.bftHandler = handler
 	dbftCore.DPosManager = dbftMgr
@@ -376,8 +375,8 @@ func (dbftCore *DBFTCore) LoadGeneValidators() (*types.ValidatorSet, error) {
 	for i, val := range config.Config.GeneBftGroup {
 		digestAddr := msp.AccountPubkeyToAddress1(msp.StringToBccspKey(val.PubKeyStr))
 		validators[i] = &types.Validator{
-			Address:   types.Address(digestAddr.GetBytes()),
-			PubKeyStr: val.PubKeyStr,
+			Address:     types.Address(digestAddr.GetBytes()),
+			PubKeyStr:   val.PubKeyStr,
 			VotingPower: int64(val.Power),
 		}
 	}

@@ -1,7 +1,7 @@
 package types
 
 import (
-	"HNB/util"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 )
 
 type CustomTDMHeader struct {
@@ -17,10 +17,10 @@ type CustomTDMExt struct {
 }
 
 type BlkMaterial struct {
-	Height uint64
-	NumTxs uint64
-	Txs    []Tx
-	Commit *Commit
+	Height      uint64
+	NumTxs      uint64
+	Txs         []Tx
+	Commit      *Commit
 	Proposer    *Validator
 	BlkVRFValue []byte
 	BlkVRFProof []byte

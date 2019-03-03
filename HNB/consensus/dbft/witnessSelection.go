@@ -1,10 +1,10 @@
 package dbft
 
 import (
-	"HNB/appMgr"
-	"HNB/consensus/algorand/types"
-	"HNB/contract/hnb"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/contract/hnb"
 )
 
 const (

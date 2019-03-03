@@ -1,16 +1,16 @@
 package solo
 
 import (
-	"HNB/appMgr"
-	"HNB/config"
-	"HNB/ledger"
-	blkCom "HNB/ledger/blockStore/common"
-	"HNB/logging"
-	"HNB/p2pNetwork"
-	"HNB/p2pNetwork/message/reqMsg"
-	"HNB/txpool"
 	"encoding/json"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	blkCom "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork/message/reqMsg"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/txpool"
 	"github.com/pkg/errors"
 	"time"
 )

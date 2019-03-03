@@ -1,18 +1,18 @@
 package msgHandler
 
 import (
-	"HNB/consensus/algorand/bftGroup/vrf"
-	cmn "HNB/consensus/algorand/common"
-	"HNB/consensus/algorand/types"
-	"HNB/consensus/consensusManager/comm/consensusType"
-	"HNB/ledger"
-	"HNB/msp"
-	"HNB/p2pNetwork"
-	"HNB/util"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/bftGroup/vrf"
+	cmn "github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/algorand/types"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/consensus/consensusManager/comm/consensusType"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/p2pNetwork"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -35,7 +35,6 @@ func (bftMgr *BftMgr) HandleBgDemand(tdmMsg *cmn.TDMMessage) (*cmn.BftGroupSwitc
 	if !bytes.Equal(bgProposerAddr, bgDemand.DigestAddr) {
 		return nil, fmt.Errorf("(bgDemand) bgProposer Addr %X != %x", bgProposerAddr, bgDemand.DigestAddr)
 	}
-
 
 	if bgNum < bftMgr.CurBftGroup.BgID {
 		return nil, fmt.Errorf("(bgDemand) bgPropose bgNum %d != %d", bftMgr.CandidateID, bgNum)
@@ -262,7 +261,6 @@ func (bftMgr *BftMgr) CheckResetBft(bgAdvice *cmn.BftGroupSwitchAdvice) error {
 
 	return nil
 }
-
 
 func (bftMgr *BftMgr) CheckNewBgProposer(bgNum uint64) bool {
 	newBgProposerAddr, err := bftMgr.GetNewBgProposerAddr(bgNum)
