@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"HNB/access/rest"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/access/rest"
 	"bytes"
 	"encoding/json"
 	"fmt"

@@ -3,8 +3,8 @@ package factory
 //import (
 //	"fmt"
 //
-//	"HNB/bccsp"
-//	"HNB/bccsp/pkcs11"
+//	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+//	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/pkcs11"
 //)
 //
 //type FactoryOpts struct {

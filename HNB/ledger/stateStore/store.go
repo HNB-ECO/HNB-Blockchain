@@ -1,9 +1,9 @@
 package stateStore
 
 import (
-	dbComm "HNB/db/common"
-	"HNB/ledger/stateStore/common"
-	"HNB/logging"
+	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"bytes"
 )
 

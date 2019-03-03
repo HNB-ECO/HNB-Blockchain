@@ -1,11 +1,11 @@
 package db
 
 import (
-	"HNB/config"
-	dbComm "HNB/db/common"
-	lImpl "HNB/db/leveldbImpl"
-	mImpl "HNB/db/mysqlImpl"
-	"HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
+	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
+	lImpl "github.com/HNB-ECO/HNB-Blockchain/HNB/db/leveldbImpl"
+	mImpl "github.com/HNB-ECO/HNB-Blockchain/HNB/db/mysqlImpl"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 )
 
 var DBLog logging.LogModule

@@ -1,18 +1,18 @@
 package msp
 
 import (
-	"HNB/bccsp"
-	"HNB/bccsp/secp256k1"
-	"HNB/bccsp/sha3"
-	"HNB/bccsp/sw"
-	"HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sha3"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
-	//	"HNB/config"
+	//	"github.com/HNB-ECO/HNB-Blockchain/HNB/config"
 )
 
 var (

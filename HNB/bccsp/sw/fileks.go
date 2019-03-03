@@ -15,8 +15,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"HNB/bccsp"
-	"HNB/bccsp/utils"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/utils"
 )
 
 func NewFileBasedKeyStore(pwd []byte, path string, readOnly bool) (bccsp.KeyStore, error) {

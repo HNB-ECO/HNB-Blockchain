@@ -1,7 +1,7 @@
 package appMgr
 
 import (
-	"HNB/ledger/stateStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore/common"
 )
 
 type StateCache struct {
@@ -62,7 +62,6 @@ func (db *StateCache) GetChangeSet() map[string]*common.StateItem {
 	return db.memory
 }
 
-func (db *StateCache) Restore(rs map[string]*common.StateItem)  {
+func (db *StateCache) Restore(rs map[string]*common.StateItem) {
 	db.memory = rs
 }
-

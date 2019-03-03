@@ -1,9 +1,9 @@
 package hgs
 
 import (
-	appComm "HNB/appMgr/common"
-	"HNB/logging"
-	"HNB/util"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"bytes"
 	"encoding/json"
 	"errors"

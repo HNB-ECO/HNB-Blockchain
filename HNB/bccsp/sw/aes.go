@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
 func GetRandomBytes(len int) ([]byte, error) {

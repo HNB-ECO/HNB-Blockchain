@@ -1,11 +1,11 @@
 package msp
 
 import (
-	"HNB/bccsp"
-	"HNB/bccsp/secp256k1"
-	"HNB/bccsp/sw"
-	"HNB/cli/common"
-	"HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/json"

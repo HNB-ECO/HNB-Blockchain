@@ -1,7 +1,7 @@
 package nonceStore
 
 import (
-	"HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"github.com/bluele/gcache"
 )
 

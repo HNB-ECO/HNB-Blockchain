@@ -1,8 +1,8 @@
 package ledger
 
 import (
-	"HNB/ledger/blockStore/common"
-	ssComm "HNB/ledger/stateStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	ssComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore/common"
 	"testing"
 )
 

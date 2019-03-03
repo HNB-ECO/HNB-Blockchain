@@ -1,11 +1,11 @@
 package cli
 
 import (
-	"HNB/bccsp"
-	"HNB/bccsp/secp256k1"
-	"HNB/bccsp/sw"
-	"HNB/cli/utils"
-	"HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli/utils"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 	"bufio"
 	"crypto/ecdsa"
 	"crypto/elliptic"

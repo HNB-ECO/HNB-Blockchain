@@ -12,7 +12,7 @@ import (
 	"encoding/asn1"
 	"math/big"
 
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
 type rsaPublicKeyASN struct {

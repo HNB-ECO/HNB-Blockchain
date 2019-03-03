@@ -9,9 +9,9 @@ import (
 	"crypto/x509"
 	"reflect"
 
-	"HNB/bccsp"
-	"HNB/bccsp/secp256k1"
-	"HNB/bccsp/utils"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/utils"
 	//"math/big"
 	"math/big"
 )

@@ -6,7 +6,7 @@ import (
 	"hash"
 	"reflect"
 
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
 type MockBCCSP struct {

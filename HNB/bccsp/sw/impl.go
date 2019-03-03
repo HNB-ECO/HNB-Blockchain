@@ -7,9 +7,9 @@ import (
 	"hash"
 	"reflect"
 
-	"HNB/bccsp"
-	"HNB/bccsp/errors"
-	"HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/errors"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"golang.org/x/crypto/sha3"
 )
 

@@ -5,7 +5,7 @@ import (
 
 	"crypto/sha256"
 
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
 type aesPrivateKey struct {

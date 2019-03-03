@@ -1,7 +1,7 @@
 package factory
 
 import (
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 	"bytes"
 	"fmt"
 	"testing"
