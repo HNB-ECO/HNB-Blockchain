@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	"HNB/bccsp"
-	"HNB/bccsp/utils"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/utils"
 )
 
 type bccspCryptoSigner struct {

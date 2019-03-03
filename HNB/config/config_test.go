@@ -50,4 +50,3 @@ func TestConfig(t *testing.T) {
 	m, _ := json.Marshal(ac)
 	fmt.Printf("%s\n", string(m))
 }
-

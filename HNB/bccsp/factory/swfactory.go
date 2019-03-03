@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"HNB/bccsp"
-	"HNB/bccsp/sw"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
 )
 
 const (

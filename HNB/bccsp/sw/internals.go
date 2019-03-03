@@ -3,7 +3,7 @@ package sw
 import (
 	"hash"
 
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
 type KeyGenerator interface {

@@ -11,10 +11,10 @@ import (
 	"math/big"
 	"os"
 
-	"HNB/bccsp"
-	"HNB/bccsp/sw"
-	"HNB/bccsp/utils"
-	"HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/utils"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"github.com/miekg/pkcs11"
 )
 

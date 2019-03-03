@@ -1,7 +1,7 @@
 package ledger
 
 import (
-	ssComm "HNB/ledger/stateStore/common"
+	ssComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore/common"
 	"encoding/binary"
 )
 

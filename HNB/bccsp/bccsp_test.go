@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"HNB/bccsp/factory"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/factory"
 	"bytes"
 	"github.com/stretchr/testify/assert"
 )

@@ -1,8 +1,8 @@
 package blockStore
 
 import (
-	"HNB/ledger/blockStore/common"
-	"HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"github.com/bluele/gcache"
 )
 

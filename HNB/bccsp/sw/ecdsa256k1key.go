@@ -11,7 +11,7 @@ import (
 
 	"crypto/elliptic"
 
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
 type Ecdsa256K1PrivateKey struct {

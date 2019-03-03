@@ -1,9 +1,9 @@
 package cli
 
 import (
-	"HNB/cli/common"
-	"HNB/cli/utils"
-	"HNB/msp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/cli/utils"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 	"bufio"
 	"fmt"
 	"github.com/urfave/cli"

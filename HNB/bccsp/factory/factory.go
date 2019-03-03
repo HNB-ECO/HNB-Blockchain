@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"HNB/bccsp"
-	"HNB/logging"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 )
 
 const LOGTABLE_BCCSP string = "bccsp"

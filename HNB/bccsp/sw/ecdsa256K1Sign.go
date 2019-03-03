@@ -1,11 +1,11 @@
 package sw
 
 import (
-	"HNB/bccsp"
-	"HNB/bccsp/secp256k1"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
 	"crypto/elliptic"
 	"errors"
-	//"HNB/bccsp/utils"
+	//"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/utils"
 	//"crypto/ecdsa"
 	"fmt"
 )

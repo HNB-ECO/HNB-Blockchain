@@ -4,9 +4,9 @@ package factory
 //	"errors"
 //	"fmt"
 //
-//	"HNB/bccsp"
-//	"HNB/bccsp/pkcs11"
-//	"HNB/bccsp/sw"
+//	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+//	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/pkcs11"
+//	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/sw"
 //)
 //
 //const (

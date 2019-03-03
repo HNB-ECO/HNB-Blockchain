@@ -1,8 +1,8 @@
 package hnb
 
 import (
-	appComm "HNB/appMgr/common"
-	"HNB/msp"
+	appComm "github.com/HNB-ECO/HNB-Blockchain/HNB/appMgr/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/msp"
 	"encoding/json"
 	"github.com/pkg/errors"
 	"sort"

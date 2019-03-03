@@ -1,7 +1,7 @@
 package mysqlImpl
 
 import (
-	"HNB/db/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
 	"database/sql"
 	"encoding/base64"
 	"encoding/binary"

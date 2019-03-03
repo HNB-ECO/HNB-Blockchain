@@ -1,7 +1,7 @@
 package common
 
 import (
-	"HNB/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 )
 
 const (

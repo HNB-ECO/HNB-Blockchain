@@ -6,8 +6,8 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"HNB/bccsp"
-	"HNB/bccsp/secp256k1"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp/secp256k1"
 )
 
 type ecdsa256K1KeyGenerator struct {

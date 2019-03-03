@@ -1,7 +1,7 @@
 package config
 
 import (
-	"HNB/util"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/util"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"

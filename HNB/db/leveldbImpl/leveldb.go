@@ -1,7 +1,7 @@
 package leveldbImpl
 
 import (
-	"HNB/db/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/filter"

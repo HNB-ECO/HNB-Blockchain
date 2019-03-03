@@ -1,9 +1,9 @@
 package nonceStore
 
 import (
-	dbComm "HNB/db/common"
-	"HNB/ledger/wrongStore/common"
-	"HNB/logging"
+	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/wrongStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 )
 
 var BlockLog logging.LogModule

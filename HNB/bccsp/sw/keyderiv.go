@@ -9,7 +9,7 @@ import (
 
 	"crypto/hmac"
 
-	"HNB/bccsp"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/bccsp"
 )
 
 type ecdsaPublicKeyKeyDeriver struct{}

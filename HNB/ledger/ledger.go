@@ -1,18 +1,18 @@
 package ledger
 
 import (
-	txComm "HNB/common"
-	dbComm "HNB/db/common"
-	"HNB/ledger/blockStore"
-	bsComm "HNB/ledger/blockStore/common"
-	"HNB/ledger/merkle"
-	"HNB/ledger/nonceStore"
-	nnComm "HNB/ledger/nonceStore/common"
-	"HNB/ledger/stateStore"
-	ssComm "HNB/ledger/stateStore/common"
-	wgComm "HNB/ledger/wrongStore/common"
-	wgStore "HNB/ledger/wrongStore"
-	"HNB/logging"
+	txComm "github.com/HNB-ECO/HNB-Blockchain/HNB/common"
+	dbComm "github.com/HNB-ECO/HNB-Blockchain/HNB/db/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore"
+	bsComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/blockStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/merkle"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/nonceStore"
+	nnComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/nonceStore/common"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore"
+	ssComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/stateStore/common"
+	wgComm "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/wrongStore/common"
+	wgStore "github.com/HNB-ECO/HNB-Blockchain/HNB/ledger/wrongStore"
+	"github.com/HNB-ECO/HNB-Blockchain/HNB/logging"
 	"errors"
 )
 

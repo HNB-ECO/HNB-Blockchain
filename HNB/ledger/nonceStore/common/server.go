@@ -1,6 +1,6 @@
 package common
 
-import "HNB/common"
+import "github.com/HNB-ECO/HNB-Blockchain/HNB/common"
 
 type NonceSet struct {
 	NI []*NonceItem
