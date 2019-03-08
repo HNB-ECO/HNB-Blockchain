@@ -1,4 +1,48 @@
-## HNB Blockchain Code Repository Introduction
+##Requirements
+
+[Go](http://golang.org/) 1.11 or newer.
+
+##Installation
+#### Linux/BSD/MacOSX/POSIX - Build from Source
+
+- Install Go according to the installation instructions here:
+  http://golang.org/doc/install
+
+- Ensure Go was installed properly and is a supported version:
+
+```bash
+$ go version
+$ go env GOROOT GOPATH
+```
+
+NOTE: The `GOROOT` and `GOPATH` above must not be the same path.  It is
+recommended that `GOPATH` is set to a directory in your home directory such as
+`~/goprojects` to avoid write permission issues.  It is also recommended to add
+`$GOPATH/bin` to your `PATH` at this point.
+
+- Run the following commands to obtain hnb, all dependencies, and install it:
+
+```bash
+$ go get -u github.com/Masterminds/glide
+$ git clone https://github.com/HNB-ECO/HNB-Blockchain.git $GOPATH/src/github.com/HNB-ECO/HNB-Blockchain/
+$ cd $GOPATH/src/github.com/HNB-ECO/HNB-Blockchain/HNB
+$ glide install
+$ cd start
+$ go build start.go
+```
+## Getting Started
+
+hnb has several configuration options available to tweak how it runs, but all
+of the basic operations described in the intro section work with zero
+configuration.
+
+#### Linux/BSD/POSIX/Source
+
+```bash
+$ ./start
+```
+
+
 |Directory|Brief Description|
 |:--------|:----------------|
 |access/rest|The interface to access this service friendly, includes RESTful, gRPC etc.|
@@ -19,3 +63,4 @@
 |start|The entrance of this project. Starts and initializes whole system.
 |txpool|The transaction pool manager which manages transactions from the phase of transaction received to the phase of consensus.
 |util|Utilities of HNB project, such as: timer util+C, date and time util, file util.
+
