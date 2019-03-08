@@ -1,8 +1,8 @@
-##Requirements
+## Requirements
 
 [Go](http://golang.org/) 1.11 or newer.
 
-##Installation
+## Installation
 #### Linux/BSD/MacOSX/POSIX - Build from Source
 
 - Install Go according to the installation instructions here:
